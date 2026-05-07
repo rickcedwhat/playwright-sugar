@@ -6,3 +6,14 @@ blob-report
 .last-run.json
 *.log
 .DS_Store
+
+# Stryker
+.stryker-tmp
+reports
+
+# Vitest
+coverage
+
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache

@@ -24,3 +24,4 @@ This document tracks future "Sugar" helpers and architectural improvements plann
 - **Global Error Handling**: Automatically capturing browser logs and screenshots ONLY on `attemptAction` failures.
 - **Automatic Retries for `verifiedFill`**: Enhancing `verifiedFill` to handle more complex state-reversion cases in specific frameworks.
 - **Plugin System**: Allowing users to register global "Cleaners" that run before every `attemptAction`.
+- **Custom Strategies Registry**: A global way to register and reuse scrolling/finding strategies.
