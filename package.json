@@ -1,6 +1,7 @@
 {
   "name": "@rickcedwhat/playwright-sugar",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.33.2",
   "description": "Sugar for Playwright: Branching logic, automatic relators, and stable clicks.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
