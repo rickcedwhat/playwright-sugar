@@ -10,17 +10,16 @@ try {
         process.exit(0); 
     }
 
-    const getVersion = (ref) => {
+    const getFileContent = (ref) => {
         try {
-            const content = execSync(`git show ${ref}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
-            return JSON.parse(content).version;
+            return execSync(`git show ${ref}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
         } catch (e) {
             return null;
         }
     };
 
-    const currentVersion = getVersion(':package.json');
-    const oldVersion = getVersion('HEAD:package.json');
+    const currentVersion = JSON.parse(getFileContent(':package.json') || '{}').version;
+    const oldVersion = JSON.parse(getFileContent('HEAD:package.json') || '{}').version;
 
     if (currentVersion && oldVersion && currentVersion !== oldVersion) {
         console.log(`📦 Version bump detected: ${oldVersion} -> ${currentVersion}`);
@@ -34,18 +33,21 @@ try {
         }
 
         try {
-            const changelogContent = fs.readFileSync('CHANGELOG.md', 'utf8');
-            if (!changelogContent.includes(`[${currentVersion}]`)) {
+            // Read the STAGED version of CHANGELOG.md
+            const changelogContent = getFileContent(':CHANGELOG.md');
+            if (!changelogContent || !changelogContent.includes(`[${currentVersion}]`)) {
                 console.error(`\n❌ ERROR: CHANGELOG.md is staged but missing entry for version [${currentVersion}].`);
                 console.error(`👉 Please add a "## [${currentVersion}]" section to CHANGELOG.md.\n`);
                 process.exit(1);
             }
         } catch (e) {
-            console.warn('⚠️ Could not verify CHANGELOG.md content:', e.message);
+            console.error('⚠️ Could not verify staged CHANGELOG.md content:', e.message);
+            process.exit(1);
         }
 
         console.log('✅ CHANGELOG.md update confirmed.');
     }
 } catch (error) {
-    process.exit(0);
+    console.error('❌ Unexpected error in version bump check:', error);
+    process.exit(1);
 }

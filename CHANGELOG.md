@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `attemptAction` engine for resilient branching logic.
 - `Outcomes` DSL for readable test outcomes.
 - `relator` for semantic ancestor-based locators.
-- `verifiedFill` for high-state verification of inputs.
+- `verifiedFill` for high-level verification of inputs.
 - `findByScrolling` with strategy-based infinite scroll support.
 - `clickToOpen` for guaranteed side-effect clicks.
 - Husky and GitHub Actions CI suite.

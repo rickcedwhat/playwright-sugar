@@ -24,7 +24,8 @@ export default defineConfig({
           { text: 'attemptAction', link: '/api/attempt-action' },
           { text: 'relator', link: '/api/relator' },
           { text: 'verifiedFill', link: '/api/verified-fill' },
-          { text: 'findByScrolling', link: '/api/find-by-scrolling' }
+          { text: 'findByScrolling', link: '/api/find-by-scrolling' },
+          { text: 'clickToOpen', link: '/api/click-to-open' }
         ]
       }
     ],

@@ -9,11 +9,17 @@ const changelogPath = path.resolve(process.cwd(), 'CHANGELOG.md');
 if (!fs.existsSync(changelogPath)) process.exit(0);
 
 const raw = fs.readFileSync(changelogPath, 'utf8');
-const header = `## [${version}]`;
-const start = raw.indexOf(header);
-if (start === -1) process.exit(0);
 
-const afterHeader = raw.slice(start + header.length);
+// Escape version string for regex
+const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Match start of line "## [version]"
+const headerRegex = new RegExp(`^## \\[${escapedVersion}\\]`, 'm');
+const match = raw.match(headerRegex);
+
+if (!match) process.exit(0);
+
+const start = match.index;
+const afterHeader = raw.slice(start + match[0].length);
 const lines = afterHeader.split(/\r?\n/);
 const collected = [];
 for (const line of lines) {
