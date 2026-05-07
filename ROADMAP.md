@@ -1,4 +1,4 @@
-# Playwright Sugar Roadmap 🗺️
+# 🚀 Playwright Sugar Roadmap (v0.1.0) 🗺️
 
 This document tracks future "Sugar" helpers and architectural improvements planned for the library.
 
