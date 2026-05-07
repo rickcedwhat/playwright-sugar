@@ -6,15 +6,15 @@ This document tracks future "Sugar" helpers and architectural improvements plann
 
 ### 🧹 Passive Toast Cleaner (`withCleaner`)
 - **Problem**: `addLocatorHandler` only triggers during a blocked action. Passive operations (like screenshots) or fast-moving tests can still be obstructed by non-blocking toasts or warnings.
-- **Goal**: A wrapper that proactively checks for and clears known obstructions before executing a block of code.
+- **Goal**: A wrapper that proactively checks for and clears known obstructions. Uses a `CleanerStrategy` registry for extensible obstruction handling.
 
 ### ⚖️ Stability Helper (`waitForStable`)
 - **Problem**: Playwright clicks the center of a bounding box, but if the element is animating or shifting (e.g. a sliding modal), the click might land on the "old" coordinates.
-- **Goal**: A utility that verifies an element's position has been unchanged for a short window (e.g. 100ms) before allowing an interaction.
+- **Goal**: A utility that verifies an element's position has been unchanged for a short window. Uses a `StabilityStrategy` registry (BoundingBox, Opacity, etc.).
 
 ### 📍 Atomic Navigation (`clickToURL`)
 - **Problem**: Separating `click()` and `waitForURL()` makes it harder to provide rich error messages when navigation fails.
-- **Goal**: An `attemptAction` based wrapper that clicks and confirms the landed URL in one step.
+- **Goal**: An `attemptAction` based wrapper that clicks and confirms the landed URL in one step. Uses `NavigationStrategy` (Regex, Predicate, Exact).
 
 ### 🤫 Network Silence (`waitForSilence`)
 - **Problem**: Standard `networkidle` is often too slow or never fires in apps with constant polling.
