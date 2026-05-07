@@ -21,10 +21,7 @@
     "prepare": "husky",
     "prepublishOnly": "pnpm run build",
     "test:unit": "vitest run",
-    "test:mutate": "pnpm exec stryker run",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "test:mutate": "pnpm exec stryker run"
   },
   "keywords": [],
   "author": "",
