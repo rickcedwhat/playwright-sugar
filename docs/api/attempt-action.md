@@ -16,7 +16,7 @@ attemptAction(params: {
 |---|---|---|
 | `action` | `() => Promise<void>` | Optional. The interaction to perform before waiting for outcomes. |
 | `outcomes` | `Outcome[]` | At least one outcome to watch for. Use the [`Outcomes`](/api/outcomes) DSL to build them. |
-| `timeout` | `number` | Overall timeout in ms. Overridden by a `Outcomes.timeout(after)` if present. |
+| `timeout` | `number` | Overall timeout in ms. Overridden by an `Outcomes.timeout(after)` if present. |
 
 ## Return value
 

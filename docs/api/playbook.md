@@ -30,7 +30,7 @@ Returns a new Playbook with merged context. The original is unchanged. Must be c
 ```ts
 const pb = datasetPb.withCtx({ page });
 // with extra context
-const pb = datasetPb.withCtx({ page, table: braintrustTable });
+const pbWithTable = datasetPb.withCtx({ page, table: braintrustTable });
 ```
 
 Extra keys are available in every act function via `ctx`:

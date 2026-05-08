@@ -38,6 +38,7 @@ if (result.isSuccess) {
 `Play` lets you describe a test scenario as a sequence of named steps. `Director` runs plays and makes assertions about whether they succeeded or failed — useful for RBAC testing.
 
 ```ts
+import { test } from '@playwright/test';
 import { Play, Playbook, Director, Outcomes } from '@rickcedwhat/playwright-sugar';
 
 const itemPb = new Playbook('ItemPlaybook', {
