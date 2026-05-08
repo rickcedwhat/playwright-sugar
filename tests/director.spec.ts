@@ -26,20 +26,20 @@ const datasetPb = new Playbook('DatasetPlaybook', {
       { name: 'empty', isSuccess: true, locator: page.getByRole('button', { name: 'Empty dataset' }) },
       { name: 'table', isSuccess: true, locator: page.locator('[data-component="TableHeadersComponent"]') },
     ], { timeout: 8000 })
-    .attempt({
-      trigger: async (page, ctx) => {
+    .attempt(
+      async (page, ctx) => {
         const state = ctx['state'] as { name: string } | null;
         const btnName = state?.name === 'empty' ? 'Empty dataset' : 'Dataset';
         await page.getByRole('button', { name: btnName, exact: true }).click();
         await page.getByPlaceholder('Name').fill(name, { timeout: 3000 });
         await page.getByRole('button', { name: 'Create' }).click();
       },
-      outcomes: [
+      [
         Outcomes.success(page => page.getByText('This dataset is empty')),
         Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
         Outcomes.timeout(10_000),
       ],
-    }),
+    ),
 
   update: ({ name, newName }: UpdateParams) => new Play()
     .nav(async page => { await page.getByRole('button', { name: 'Datasets' }).click(); })
@@ -47,18 +47,18 @@ const datasetPb = new Playbook('DatasetPlaybook', {
       await page.locator(`tr:has-text("${name}")`).getByRole('button', { name: 'Row actions' }).click();
       await page.getByRole('menuitem', { name: 'Rename' }).click();
     })
-    .attempt({
-      trigger: async page => {
+    .attempt(
+      async page => {
         // For viewer: no textbox appears (rename blocked by role check), trigger fails softly
         await page.getByRole('textbox').fill(newName, { timeout: 2000 });
         await page.getByRole('button', { name: 'Save' }).click();
       },
-      outcomes: [
+      [
         Outcomes.success(page => page.getByText('Updated dataset')),
         Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
         Outcomes.timeout(5000),
       ],
-    })
+    )
     .cleanup(async (page, ctx) => {
       const result = ctx['result'] as { isSuccess: boolean } | null;
       if (result?.isSuccess) {

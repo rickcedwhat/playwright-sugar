@@ -51,18 +51,18 @@ const itemPb = new Playbook('ItemPlaybook', {
 
   create: ({ name }) => new Play()
     .nav(async page => { await page.getByRole('link', { name: 'Items' }).click(); })
-    .attempt({
-      trigger: async page => {
+    .attempt(
+      async page => {
         await page.getByRole('button', { name: 'New item' }).click();
         await page.getByPlaceholder('Name').fill(name);
         await page.getByRole('button', { name: 'Create' }).click();
       },
-      outcomes: [
+      [
         Outcomes.success(page => page.getByText('Item created')),
         Outcomes.failure(page => page.getByText('Permission denied')),
         Outcomes.timeout(8000),
       ],
-    }),
+    ),
 });
 
 test('admin can create item', async ({ page }) => {
