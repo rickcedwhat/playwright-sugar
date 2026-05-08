@@ -14,7 +14,7 @@ pnpm dev        # starts on http://localhost:5173
 
 Append `?role=viewer` to any URL to switch to viewer mode. In viewer mode, clicking Create / Rename / Delete fires a `"Failed to…"` toast instead of performing the action. Omit the param (or use `?role=admin`) for full access.
 
-```
+```text
 http://localhost:5173/?role=viewer
 ```
 
@@ -46,7 +46,7 @@ http://localhost:5173/?role=viewer
 | Rename input | `page.getByRole('textbox')` |
 | Save button | `page.getByRole('button', { name: 'Save' })` |
 | Update success toast | `page.getByText('Updated dataset')` |
-| Failure toast | `page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to\|Could not/i })` |
+| Failure toast | `page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to|Could not/i })` |
 
 **Leave dialog:** Open the rename form, then click a sidebar link. A "Leave?" dialog intercepts the navigation. Pressing `Escape` or clicking "Stay" keeps the rename form open; "Leave" navigates away and discards changes.
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface Props {
   onLeave: () => void;
@@ -6,6 +6,12 @@ interface Props {
 }
 
 export default function LeaveDialog({ onLeave, onStay }: Props) {
+  const stayRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    stayRef.current?.focus();
+  }, []);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onStay();
@@ -19,6 +25,7 @@ export default function LeaveDialog({ onLeave, onStay }: Props) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="leave-dialog-title"
+      aria-describedby="leave-dialog-desc"
       style={{
         position: 'fixed',
         inset: 0,
@@ -41,11 +48,12 @@ export default function LeaveDialog({ onLeave, onStay }: Props) {
         <h2 id="leave-dialog-title" style={{ marginBottom: '8px', fontSize: '18px' }}>
           Leave?
         </h2>
-        <p style={{ color: '#666', marginBottom: '24px' }}>
+        <p id="leave-dialog-desc" style={{ color: '#666', marginBottom: '24px' }}>
           You have unsaved changes. If you leave, they will be lost.
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button
+            ref={stayRef}
             onClick={onStay}
             style={{
               padding: '8px 16px',

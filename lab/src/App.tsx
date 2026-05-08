@@ -48,7 +48,7 @@ export default function App() {
   function handleCreate(name: string) {
     const id = crypto.randomUUID();
     updateDatasets([...datasets, { id, name }]);
-    setRoute({ view: 'dataset-detail', id });
+    navigate({ view: 'dataset-detail', id });
   }
 
   function handleUpdate(id: string, name: string) {
