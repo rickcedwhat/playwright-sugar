@@ -3,11 +3,12 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Playwright Sugar",
   description: "Sweet utilities for Playwright automation",
+  base: '/playwright-sugar/',
   themeConfig: {
     logo: '/logo.png',
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'API', link: '/api/' },
+      { text: 'API', link: '/api/attempt-action' },
       { text: 'GitHub', link: 'https://github.com/rickcedwhat/playwright-sugar' }
     ],
     sidebar: [
@@ -15,17 +16,26 @@ export default defineConfig({
         text: 'Introduction',
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
-          { text: 'Philosophy', link: '/guide/philosophy' }
         ]
       },
       {
         text: 'Core Helpers',
         items: [
           { text: 'attemptAction', link: '/api/attempt-action' },
+          { text: 'Outcomes', link: '/api/outcomes' },
           { text: 'relator', link: '/api/relator' },
           { text: 'verifiedFill', link: '/api/verified-fill' },
+          { text: 'clickToOpen', link: '/api/click-to-open' },
           { text: 'findByScrolling', link: '/api/find-by-scrolling' },
-          { text: 'clickToOpen', link: '/api/click-to-open' }
+        ]
+      },
+      {
+        text: 'Director API',
+        items: [
+          { text: 'Play', link: '/api/play' },
+          { text: 'Playbook', link: '/api/playbook' },
+          { text: 'Director', link: '/api/director' },
+          { text: 'SyncStrategy', link: '/api/sync-strategy' },
         ]
       }
     ],

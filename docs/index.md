@@ -18,11 +18,13 @@ hero:
 
 features:
   - title: Soft Triggers
-    details: Handle RBAC, Toasts, and optional UI elements with the `attemptAction` engine.
+    details: "Handle RBAC, toasts, and optional UI elements with the attemptAction engine."
   - title: Semantic Locators
-    details: Use `relator` to find elements based on their relationship to semantic ancestors.
+    details: "Use relator to find elements based on their relationship to semantic ancestors."
   - title: Verified Inputs
-    details: `verifiedFill` ensures your inputs actually stick in high-state modern apps.
+    details: "verifiedFill ensures your inputs actually stick in high-state modern apps."
   - title: Smart Scrolling
-    details: Strategy-based search for virtualized and infinite-scroll lists.
+    details: "Strategy-based search for virtualized and infinite-scroll lists."
+  - title: Director API
+    details: "Play, Playbook, and Director — structured RBAC tests and fixture setup with full logging."
 ---
