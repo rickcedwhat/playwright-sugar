@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { attemptAction, detectPageState, relator, clickToOpen, Outcomes, verifiedFill } from '../src/index.js';
 
 test.describe('Playwright Simple POC', () => {
-  
+
   test('attemptAction should detect outcomes', async ({ page }) => {
     await page.setContent(`
       <button id="trigger">Click Me</button>
@@ -63,13 +63,12 @@ test.describe('Playwright Simple POC', () => {
 
     const anchor = page.getByText('User #2');
     const target = page.locator('input.status');
-    
-    // Using the container barrier
+
     await relator(anchor, target, 'div.row').fill('Active');
-    
+
     const val1 = await page.locator('#row1 input.status').inputValue();
     const val2 = await page.locator('#row2 input.status').inputValue();
-    
+
     expect(val1).toBe('Inactive');
     expect(val2).toBe('Active');
   });
@@ -88,14 +87,11 @@ test.describe('Playwright Simple POC', () => {
 
     const anchor = page.getByText('Pro Plan');
     const target = page.getByRole('button', { name: 'Buy' });
-    
-    // Automatic LCA logic
+
     const buyButton = relator(anchor, target);
-    await buyButton.highlight(); // Visual feedback
+    await buyButton.highlight();
     await buyButton.click();
-    
-    // Verify we clicked the right one (the one in the Pro Plan card)
-    // For this simple test, we just check that it didn't throw ambiguity
+
     await expect(buyButton).toBeVisible();
   });
 
@@ -108,7 +104,6 @@ test.describe('Playwright Simple POC', () => {
     const trigger = page.locator('#trigger');
     const target = page.locator('#target');
 
-    // First click does nothing, second click shows target
     await page.evaluate(() => {
       (window as any).clickCount = 0;
       document.getElementById('trigger')!.addEventListener('click', () => {
@@ -120,34 +115,33 @@ test.describe('Playwright Simple POC', () => {
     });
 
     await clickToOpen(trigger, target, { subTimeout: 1000, maxRetries: 3 });
-    
+
     await expect(target).toBeVisible();
     const clickCount = await page.evaluate(() => (window as any).clickCount);
     expect(clickCount).toBe(2);
   });
 
-  test('attemptAction should support shorthand Locator outcomes', async ({ page }) => {
+  test('attemptAction should detect a named outcome', async ({ page }) => {
     await page.setContent('<div id="done">Done</div>');
     const done = page.locator('#done');
-    
-    // Passing a raw locator instead of a full Outcome object
+
     const result = await attemptAction({
-      outcomes: [done]
+      outcomes: [{ name: 'done', locator: done, isSuccess: true }]
     });
-    
+
     expect(result.isSuccess).toBe(true);
-    expect(result.outcome).toContain('#done');
+    expect(result.outcome).toBe('done');
   });
 
   test('attemptAction should provide rich debug info on timeout', async ({ page }) => {
     await page.setContent('<div>Nothing here</div>');
     const missing = page.locator('#missing');
-    
+
     const promise = attemptAction({
       outcomes: [{ name: 'Missing', locator: missing, isSuccess: true }],
       timeout: 500
     });
-    
+
     await expect(promise).rejects.toThrow(/checked for:\n  - Missing/);
   });
 
@@ -156,15 +150,13 @@ test.describe('Playwright Simple POC', () => {
       <div class="match">1</div>
       <div class="match">2</div>
     `);
-    
+
     const ambiguous = page.locator('.match');
-    
-    // This will trigger a strict mode violation in Playwright because .match matches 2 elements
-    // We expect it to log the ASCII warning to console.error
+
     await attemptAction({
       outcomes: [{ name: 'Ambiguous', locator: ambiguous, isSuccess: true }],
       timeout: 500
-    }).catch(() => {}); // Ignore the timeout error, we are checking the console
+    }).catch(() => {});
   });
 
   test('Soft Trigger: Button Click Works (Success)', async ({ page }) => {
@@ -172,22 +164,22 @@ test.describe('Playwright Simple POC', () => {
       <button id="run">Run</button>
       <div id="success" style="display: none;">Job Started</div>
     `);
-    
+
     const runBtn = page.locator('#run');
     const successMsg = page.getByText('Job Started');
-    
+
     const result = await attemptAction({
-      action: async () => { 
+      action: async () => {
         await runBtn.click();
         await page.evaluate(() => {
           setTimeout(() => document.getElementById('success')!.style.display = 'block', 100);
         });
       },
-      outcomes: [successMsg]
+      outcomes: [{ name: 'Job Started', locator: successMsg, isSuccess: true }]
     });
-    
+
     expect(result.isSuccess).toBe(true);
-    expect(result.outcome).toContain('Job Started');
+    expect(result.outcome).toBe('Job Started');
   });
 
   test('Soft Trigger: Button Click Met with Error Message', async ({ page }) => {
@@ -195,12 +187,12 @@ test.describe('Playwright Simple POC', () => {
       <button id="run">Run</button>
       <div id="error" style="display: none;">Access Denied</div>
     `);
-    
+
     const runBtn = page.locator('#run');
     const errorMsg = page.getByText('Access Denied');
-    
+
     const result = await attemptAction({
-      action: async () => { 
+      action: async () => {
         await runBtn.click();
         await page.evaluate(() => {
           setTimeout(() => document.getElementById('error')!.style.display = 'block', 100);
@@ -210,18 +202,17 @@ test.describe('Playwright Simple POC', () => {
         { name: 'Access Denied', locator: errorMsg, isSuccess: false }
       ]
     });
-    
+
     expect(result.isSuccess).toBe(false);
     expect(result.outcome).toBe('Access Denied');
   });
 
   test('Soft Trigger: Button Missing (Fallback to Timeout Outcome)', async ({ page }) => {
     await page.setContent('<div>No button here</div>');
-    
+
     const result = await attemptAction({
-      action: async () => { 
-        // This will fail because the button doesn't exist
-        await page.locator('#missing-run-btn').click({ timeout: 500 }); 
+      action: async () => {
+        await page.locator('#missing-run-btn').click({ timeout: 500 });
       },
       outcomes: [
         { name: 'Success State', locator: page.locator('#success'), isSuccess: true },
@@ -229,20 +220,19 @@ test.describe('Playwright Simple POC', () => {
       ],
       timeout: 2000
     });
-    
+
     expect(result.isSuccess).toBe(false);
     expect(result.outcome).toBe('RBAC: Button Missing');
   });
 
   test('Soft Trigger: Distinguish between Action Error and Timeout', async ({ page }) => {
     await page.setContent('<div>Nothing here</div>');
-    
+
     const outcomes = [
       { name: 'Timed Out', isTimeoutOutcome: true, isSuccess: false },
       { name: 'Action Failed', isActionErrorOutcome: true, isSuccess: false }
     ];
 
-    // Case 1: Action fails
     const res1 = await attemptAction({
       action: async () => { throw new Error('Boom'); },
       outcomes,
@@ -250,35 +240,33 @@ test.describe('Playwright Simple POC', () => {
     });
     expect(res1.outcome).toBe('Action Failed');
 
-    // Case 2: Action works, but nothing happens
     const res2 = await attemptAction({
-      action: async () => {}, // Noop
+      action: async () => {},
       outcomes,
       timeout: 500
     });
     expect(res2.outcome).toBe('Timed Out');
   });
 
-  test('Outcomes DSL should produce correct objects', async ({ page }) => {
+  test('Outcomes DSL produces correct objects', async ({ page }) => {
     const loc = page.locator('#test');
-    expect(Outcomes.success('S', loc)).toEqual({ name: 'S', locator: loc, isSuccess: true });
-    expect(Outcomes.failure('F', loc)).toEqual({ name: 'F', locator: loc, isSuccess: false });
-    expect(Outcomes.actionError('E')).toEqual({ name: 'E', isActionErrorOutcome: true, isSuccess: false });
-    expect(Outcomes.timeout('T')).toEqual({ name: 'T', isTimeoutOutcome: true, isSuccess: false });
-    expect(Outcomes.timeout('T', { isSuccess: true })).toEqual({ name: 'T', isTimeoutOutcome: true, isSuccess: true });
+    expect(Outcomes.success({ name: 'S', locator: loc })).toEqual({ name: 'S', locator: loc, isSuccess: true });
+    expect(Outcomes.failure({ name: 'F', locator: loc })).toEqual({ name: 'F', locator: loc, isSuccess: false });
+    expect(Outcomes.actionError({ name: 'E' })).toEqual({ name: 'E', isActionErrorOutcome: true, isSuccess: false });
+    expect(Outcomes.timeout({ name: 'T' })).toEqual({ name: 'T', isTimeoutOutcome: true, isSuccess: false });
   });
 
-  test('Outcomes DSL should support onOutcome', async ({ page }) => {
+  test('Outcomes DSL supports onOutcome callback', async ({ page }) => {
     const loc = page.locator('#test');
     const cb = async () => 'data';
-    const outcome = Outcomes.success('S', loc, { onOutcome: cb });
+    const outcome = Outcomes.success({ name: 'S', locator: loc, onOutcome: cb });
     expect(outcome.onOutcome).toBe(cb);
   });
 
   test('verifiedFill should verify the value stuck', async ({ page }) => {
     await page.setContent('<input id="email">');
     const input = page.locator('#email');
-    
+
     await verifiedFill(input, 'test@example.com');
     await expect(input).toHaveValue('test@example.com');
   });

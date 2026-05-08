@@ -95,11 +95,17 @@ export class Director {
 
     const finalCtx = await play.run(label, ctx);
 
-    if (!finalCtx['result']) {
-      return { isSuccess: false, outcome: 'no-attempt' };
+    if (finalCtx['result']) {
+      return finalCtx['result'] as PlayResult;
     }
 
-    return finalCtx['result'] as PlayResult;
+    // exists-style plays use .detect() with no .attempt() — promote state to result
+    if (finalCtx['state']) {
+      const s = finalCtx['state'] as { name: string; isSuccess: boolean; data?: unknown };
+      return { isSuccess: s.isSuccess, outcome: s.name, data: s.data };
+    }
+
+    return { isSuccess: false, outcome: 'no-attempt' };
   }
 
   private async _retryExists(
