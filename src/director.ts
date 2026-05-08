@@ -73,9 +73,8 @@ export class Director {
     }
 
     if (opts?.syncTo) {
-      if (opts.syncStrategy) {
-        await opts.syncStrategy.sync(opts.syncTo);
-      }
+      const strategy = opts.syncStrategy ?? SyncStrategy.default();
+      await strategy.sync(opts.syncTo);
 
       const targetPlaybook = playbook.withCtx({ page: opts.syncTo });
       await this._retryExists(targetPlaybook, params, playbook.name);
