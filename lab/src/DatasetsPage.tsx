@@ -253,10 +253,13 @@ export default function DatasetsPage({
           onClick={() => setShowCreate(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-dataset-title"
             style={modal}
             onClick={e => e.stopPropagation()}
           >
-            <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>
+            <h2 id="create-dataset-title" style={{ marginBottom: '16px', fontSize: '18px' }}>
               Create dataset
             </h2>
             <input

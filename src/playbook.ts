@@ -79,7 +79,7 @@ export class Playbook<TPlays extends PlaybookPlays = PlaybookPlays> {
 
   /**
    * Returns a PlayCtx derived from the bound context, with state and result
-   * initialised to null. Excludes the `page` key (passed separately to play.run).
+   * initialised to null. Includes `page` so Play.run() can access it via ctx['page'].
    */
   buildCtx(): PlayCtx {
     const { page: _page, ...rest } = this._ctx as PlaybookCtx;
