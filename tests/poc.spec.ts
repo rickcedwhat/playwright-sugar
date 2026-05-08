@@ -250,16 +250,16 @@ test.describe('Playwright Simple POC', () => {
 
   test('Outcomes DSL produces correct objects', async ({ page }) => {
     const loc = page.locator('#test');
-    expect(Outcomes.success({ name: 'S', locator: loc })).toEqual({ name: 'S', locator: loc, isSuccess: true });
-    expect(Outcomes.failure({ name: 'F', locator: loc })).toEqual({ name: 'F', locator: loc, isSuccess: false });
-    expect(Outcomes.actionError({ name: 'E' })).toEqual({ name: 'E', isActionErrorOutcome: true, isSuccess: false });
-    expect(Outcomes.timeout({ name: 'T' })).toEqual({ name: 'T', isTimeoutOutcome: true, isSuccess: false });
+    expect(Outcomes.success('S', loc)).toEqual({ name: 'S', locator: loc, isSuccess: true });
+    expect(Outcomes.failure('F', loc)).toEqual({ name: 'F', locator: loc, isSuccess: false });
+    expect(Outcomes.actionError('E')).toEqual({ name: 'E', isActionErrorOutcome: true, isSuccess: false });
+    expect(Outcomes.timeout('T')).toEqual({ name: 'T', isTimeoutOutcome: true, isSuccess: false });
   });
 
   test('Outcomes DSL supports onOutcome callback', async ({ page }) => {
     const loc = page.locator('#test');
     const cb = async () => 'data';
-    const outcome = Outcomes.success({ name: 'S', locator: loc, onOutcome: cb });
+    const outcome = Outcomes.success('S', loc, { onOutcome: cb });
     expect(outcome.onOutcome).toBe(cb);
   });
 

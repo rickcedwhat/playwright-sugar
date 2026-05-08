@@ -20,6 +20,10 @@ const mockDetectPageState = detectPageState as unknown as MockInstance;
 // Suppress play logging in tests
 beforeAll(() => { vi.spyOn(console, 'log').mockImplementation(() => {}); });
 afterAll(() => { vi.restoreAllMocks(); });
+beforeEach(() => {
+  mockAttemptAction.mockReset();
+  mockDetectPageState.mockReset();
+});
 
 function makePage(overrides: Partial<Record<string, unknown>> = {}): Page {
   return {
@@ -76,7 +80,7 @@ describe('Play chain order', () => {
       .prep(async () => { names.push('prep'); })
       .attempt({
         trigger: async () => {},
-        outcomes: [Outcomes.success({ locator: mockLocator })],
+        outcomes: [Outcomes.success(mockLocator)],
       });
 
     await play.run('label', { page, state: null, result: null });
@@ -200,7 +204,7 @@ describe('.attempt() and .cleanup()', () => {
     mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', data: undefined });
 
     const play = new Play()
-      .attempt({ trigger: async () => {}, outcomes: [Outcomes.success({ locator: mockLocator })] })
+      .attempt({ trigger: async () => {}, outcomes: [Outcomes.success(mockLocator)] })
       .cleanup(cleanupFn);
 
     await play.run('label', { page, state: null, result: null });
@@ -214,7 +218,7 @@ describe('.attempt() and .cleanup()', () => {
     mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'fail', data: undefined });
 
     const play = new Play()
-      .attempt({ trigger: async () => {}, outcomes: [Outcomes.failure({ locator: mockLocator })] })
+      .attempt({ trigger: async () => {}, outcomes: [Outcomes.failure(mockLocator)] })
       .cleanup(cleanupFn);
 
     await play.run('label', { page, state: null, result: null });
@@ -228,7 +232,7 @@ describe('.attempt() and .cleanup()', () => {
     mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'blocked', data: undefined });
 
     const play = new Play()
-      .attempt({ trigger: async () => {}, outcomes: [Outcomes.failure({ locator: mockLocator })] })
+      .attempt({ trigger: async () => {}, outcomes: [Outcomes.failure(mockLocator)] })
       .cleanup(async (_p, ctx) => { seenResult = ctx['result']; });
 
     await play.run('label', { page, state: null, result: null });
@@ -241,7 +245,7 @@ describe('.attempt() and .cleanup()', () => {
     mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'created', data: 42 });
 
     const play = new Play()
-      .attempt({ trigger: async () => {}, outcomes: [Outcomes.success({ locator: mockLocator })] });
+      .attempt({ trigger: async () => {}, outcomes: [Outcomes.success(mockLocator)] });
 
     const ctx = await play.run('label', { page, state: null, result: null });
 
@@ -284,7 +288,7 @@ describe('error labels', () => {
 
     const play = new Play().attempt('submit', {
       trigger: async () => {},
-      outcomes: [Outcomes.success({ locator: mockLocator })],
+      outcomes: [Outcomes.success(mockLocator)],
     });
 
     await expect(play.run('Pb > play', { page, state: null, result: null }))
@@ -308,7 +312,7 @@ describe('.attempt() locator resolution', () => {
 
     const play = new Play().attempt({
       trigger: async () => {},
-      outcomes: [Outcomes.success({ locator: p => p.getByText('This dataset is empty') })],
+      outcomes: [Outcomes.success(p => p.getByText('This dataset is empty'))],
     });
 
     await play.run('label', { page, state: null, result: null });
@@ -318,26 +322,23 @@ describe('.attempt() locator resolution', () => {
     expect(page.getByText).toHaveBeenCalledWith('This dataset is empty');
   });
 
-  it('resolves text shorthand via page.getByText', async () => {
+  it('passes ctx as second arg to locator fns', async () => {
     const page = makePage();
-    const textLocator = { toString: () => 'text-locator' } as any;
-    (page.getByText as unknown as MockInstance).mockReturnValue(textLocator);
-
-    let capturedOutcomes: unknown;
-    mockAttemptAction.mockImplementationOnce(async ({ outcomes }) => {
-      capturedOutcomes = outcomes;
-      return { isSuccess: true, outcome: 'success', data: undefined };
-    });
+    (page.getByText as unknown as MockInstance).mockReturnValue({});
+    let capturedCtx: unknown;
+    mockAttemptAction.mockImplementationOnce(async () =>
+      ({ isSuccess: true, outcome: 'success', data: undefined })
+    );
 
     const play = new Play().attempt({
       trigger: async () => {},
-      outcomes: [Outcomes.success({ text: 'Updated dataset' })],
+      outcomes: [Outcomes.success((_p, ctx) => { capturedCtx = ctx; return _p.getByText('test'); })],
     });
 
     await play.run('label', { page, state: null, result: null });
 
-    const outcome = (capturedOutcomes as any[])[0];
-    expect(outcome.locator).toBe(textLocator);
+    expect(capturedCtx).toBeDefined();
+    expect(typeof capturedCtx).toBe('object');
   });
 
   it('passes the timeout outcome .after value to attemptAction', async () => {
@@ -351,8 +352,8 @@ describe('.attempt() locator resolution', () => {
     const play = new Play().attempt({
       trigger: async () => {},
       outcomes: [
-        Outcomes.success({ text: 'done' }),
-        Outcomes.timeout({ after: 8000 }),
+        Outcomes.success(p => p.getByText('done')),
+        Outcomes.timeout(8000),
       ],
     });
 
@@ -365,28 +366,28 @@ describe('.attempt() locator resolution', () => {
 // ── Outcomes DSL ──────────────────────────────────────────────────────────────
 
 describe('Outcomes DSL', () => {
-  it('success({ locator: fn }) stores the fn and isSuccess: true', () => {
+  it('success(fn) stores the fn and isSuccess: true', () => {
     const fn = (p: Page) => p.getByText('hello');
-    const outcome = Outcomes.success({ locator: fn });
+    const outcome = Outcomes.success(fn);
     expect(outcome.isSuccess).toBe(true);
     expect(outcome.locator).toBe(fn);
   });
 
-  it('failure({ locator: fn }) stores the fn and isSuccess: false', () => {
+  it('failure(fn) stores the fn and isSuccess: false', () => {
     const fn = (p: Page) => p.getByText('error');
-    const outcome = Outcomes.failure({ locator: fn });
+    const outcome = Outcomes.failure(fn);
     expect(outcome.isSuccess).toBe(false);
     expect(outcome.locator).toBe(fn);
   });
 
-  it('success({ text }) derives name from text string', () => {
-    const outcome = Outcomes.success({ text: 'Created!' });
+  it('success(name, locator) uses explicit name', () => {
+    const outcome = Outcomes.success('Created!', mockLocator);
     expect(outcome.name).toBe('Created!');
     expect(outcome.isSuccess).toBe(true);
   });
 
-  it('timeout({ after: n }) stores after and isTimeoutOutcome', () => {
-    const outcome = Outcomes.timeout({ after: 5000 });
+  it('timeout(after) stores after and isTimeoutOutcome', () => {
+    const outcome = Outcomes.timeout(5000);
     expect(outcome.after).toBe(5000);
     expect(outcome.isTimeoutOutcome).toBe(true);
     expect(outcome.isSuccess).toBe(false);
@@ -514,7 +515,7 @@ describe('Play logging', () => {
 
     const play = new Play().attempt({
       trigger: async () => {},
-      outcomes: [Outcomes.failure({ locator: mockLocator })],
+      outcomes: [Outcomes.failure(mockLocator)],
     });
 
     await play.run('label', { page, state: null, result: null });
@@ -549,7 +550,7 @@ describe('Play logging', () => {
     mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', data: undefined });
 
     const play = new Play()
-      .attempt({ trigger: async () => {}, outcomes: [Outcomes.success({ locator: mockLocator })] })
+      .attempt({ trigger: async () => {}, outcomes: [Outcomes.success(mockLocator)] })
       .act('post', async () => { throw new Error('after attempt'); })
       .cleanup(async () => {});
 

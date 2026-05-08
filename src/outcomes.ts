@@ -7,75 +7,69 @@ import type { Outcome } from './attemptAction.js';
  * to derive the `timeout` parameter.
  */
 export type OutcomeSpec = Omit<Outcome, 'locator'> & {
-  locator?: Locator | ((page: Page) => Locator);
+  locator?: Locator | ((page: Page, ctx: Record<string, unknown>) => Locator);
   after?: number;
 };
 
-// ── config shapes ─────────────────────────────────────────────────────────────
+type LocatorArg = Locator | ((page: Page, ctx: Record<string, unknown>) => Locator);
 
-type LocatorConfig = {
-  name?: string;
-  locator: Locator | ((page: Page) => Locator);
-  onOutcome?: (winner: Locator) => Promise<unknown>;
-};
-
-type TextConfig = {
-  name?: string;
-  text: string | RegExp;
-  onOutcome?: (winner: Locator) => Promise<unknown>;
-};
-
-type OutcomeInput = LocatorConfig | TextConfig;
-
-function resolveLocator(config: OutcomeInput): Locator | ((page: Page) => Locator) {
-  if ('text' in config) {
-    const { text } = config;
-    return (p) => p.getByText(text);
-  }
-  return config.locator;
-}
-
-function deriveName(config: OutcomeInput, fallback: string): string {
-  if (config.name) return config.name;
-  if ('text' in config) return typeof config.text === 'string' ? config.text : fallback;
-  return fallback;
-}
+type OnOutcome = { onOutcome?: (winner: Locator) => Promise<unknown> };
 
 // ── DSL ───────────────────────────────────────────────────────────────────────
 
-function successOutcome(config: OutcomeInput): OutcomeSpec {
+function successOutcome(locator: LocatorArg): OutcomeSpec;
+function successOutcome(name: string, locator: LocatorArg, opts?: OnOutcome): OutcomeSpec;
+function successOutcome(
+  nameOrLocator: string | LocatorArg,
+  locator?: LocatorArg,
+  opts?: OnOutcome
+): OutcomeSpec {
+  const [name, loc] = typeof nameOrLocator === 'string'
+    ? [nameOrLocator, locator!]
+    : ['success', nameOrLocator];
   return {
-    name: deriveName(config, 'success'),
+    name,
     isSuccess: true,
-    locator: resolveLocator(config),
-    ...(config.onOutcome && { onOutcome: config.onOutcome }),
+    locator: loc,
+    ...(opts?.onOutcome && { onOutcome: opts.onOutcome }),
   };
 }
 
-function failureOutcome(config: OutcomeInput): OutcomeSpec {
+function failureOutcome(locator: LocatorArg): OutcomeSpec;
+function failureOutcome(name: string, locator: LocatorArg, opts?: OnOutcome): OutcomeSpec;
+function failureOutcome(
+  nameOrLocator: string | LocatorArg,
+  locator?: LocatorArg,
+  opts?: OnOutcome
+): OutcomeSpec {
+  const [name, loc] = typeof nameOrLocator === 'string'
+    ? [nameOrLocator, locator!]
+    : ['failure', nameOrLocator];
   return {
-    name: deriveName(config, 'failure'),
+    name,
     isSuccess: false,
-    locator: resolveLocator(config),
-    ...(config.onOutcome && { onOutcome: config.onOutcome }),
+    locator: loc,
+    ...(opts?.onOutcome && { onOutcome: opts.onOutcome }),
   };
 }
 
-function timeoutOutcome(config: { after?: number; name?: string } = {}): OutcomeSpec {
+function timeoutOutcome(): OutcomeSpec;
+function timeoutOutcome(after: number): OutcomeSpec;
+function timeoutOutcome(name: string, after?: number): OutcomeSpec;
+function timeoutOutcome(nameOrAfter?: string | number, after?: number): OutcomeSpec {
+  if (typeof nameOrAfter === 'number') {
+    return { name: 'timeout', isSuccess: false, isTimeoutOutcome: true, after: nameOrAfter };
+  }
   return {
-    name: config.name ?? 'timeout',
+    name: nameOrAfter ?? 'timeout',
     isSuccess: false,
     isTimeoutOutcome: true,
-    ...(config.after !== undefined && { after: config.after }),
+    ...(after !== undefined && { after }),
   };
 }
 
-function actionErrorOutcome(config: { name?: string } = {}): OutcomeSpec {
-  return {
-    name: config.name ?? 'action-error',
-    isSuccess: false,
-    isActionErrorOutcome: true,
-  };
+function actionErrorOutcome(name?: string): OutcomeSpec {
+  return { name: name ?? 'action-error', isSuccess: false, isActionErrorOutcome: true };
 }
 
 export const Outcomes = {

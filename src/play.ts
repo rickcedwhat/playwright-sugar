@@ -168,7 +168,7 @@ export class Play {
               ...(o.isActionErrorOutcome && { isActionErrorOutcome: true }),
               ...(o.onOutcome && { onOutcome: o.onOutcome }),
               ...(o.locator !== undefined && {
-                locator: typeof o.locator === 'function' ? o.locator(page) : o.locator,
+                locator: typeof o.locator === 'function' ? o.locator(page, ctx) : o.locator,
               }),
             }));
 

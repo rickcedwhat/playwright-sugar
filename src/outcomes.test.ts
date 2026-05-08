@@ -5,48 +5,58 @@ import { Outcomes } from './outcomes.js';
 describe('Outcomes DSL', () => {
   const mockLocator = {} as any;
 
-  it('success({ locator }) stores a page-bound fn and isSuccess: true', () => {
-    const fn = (p: Page) => p.getByText('hello');
-    const outcome = Outcomes.success({ locator: fn });
-    expect(outcome.isSuccess).toBe(true);
-    expect(outcome.locator).toBe(fn);
-  });
-
-  it('success({ locator }) accepts a pre-bound Locator', () => {
-    const outcome = Outcomes.success({ locator: mockLocator });
+  it('success(locator) stores pre-bound locator and isSuccess: true', () => {
+    const outcome = Outcomes.success(mockLocator);
     expect(outcome.isSuccess).toBe(true);
     expect(outcome.locator).toBe(mockLocator);
-  });
-
-  it('success({ text }) stores a page-bound fn derived from getByText', () => {
-    const outcome = Outcomes.success({ text: 'Created!' });
-    expect(outcome.isSuccess).toBe(true);
-    expect(typeof outcome.locator).toBe('function');
-    // name is derived from text
-    expect(outcome.name).toBe('Created!');
-  });
-
-  it('success({ text }) uses regex as name fallback', () => {
-    const outcome = Outcomes.success({ text: /done/i });
     expect(outcome.name).toBe('success');
   });
 
-  it('success({ name, locator }) uses the provided name', () => {
-    const outcome = Outcomes.success({ name: 'created', locator: mockLocator });
+  it('success(name, locator) uses the provided name', () => {
+    const outcome = Outcomes.success('created', mockLocator);
     expect(outcome.name).toBe('created');
+    expect(outcome.locator).toBe(mockLocator);
+    expect(outcome.isSuccess).toBe(true);
   });
 
-  it('failure({ locator }) stores a page-bound fn and isSuccess: false', () => {
-    const fn = (p: Page) => p.getByText('error');
-    const outcome = Outcomes.failure({ locator: fn });
-    expect(outcome.isSuccess).toBe(false);
+  it('success(fn) stores a (page, ctx) => Locator fn', () => {
+    const fn = (p: Page) => p.getByText('Done');
+    const outcome = Outcomes.success(fn);
+    expect(outcome.locator).toBe(fn);
+    expect(outcome.isSuccess).toBe(true);
+  });
+
+  it('success(name, fn) stores fn with explicit name', () => {
+    const fn = (p: Page) => p.getByText('Done');
+    const outcome = Outcomes.success('done', fn);
+    expect(outcome.name).toBe('done');
     expect(outcome.locator).toBe(fn);
   });
 
-  it('failure({ text }) derives name from text', () => {
-    const outcome = Outcomes.failure({ text: 'Not allowed' });
+  it('success(name, locator, { onOutcome }) stores the callback', () => {
+    const cb = async () => 'data';
+    const outcome = Outcomes.success('S', mockLocator, { onOutcome: cb });
+    expect(outcome.onOutcome).toBe(cb);
+  });
+
+  it('failure(locator) stores locator and isSuccess: false', () => {
+    const outcome = Outcomes.failure(mockLocator);
     expect(outcome.isSuccess).toBe(false);
-    expect(outcome.name).toBe('Not allowed');
+    expect(outcome.locator).toBe(mockLocator);
+    expect(outcome.name).toBe('failure');
+  });
+
+  it('failure(name, locator) uses the provided name', () => {
+    const outcome = Outcomes.failure('blocked', mockLocator);
+    expect(outcome.name).toBe('blocked');
+    expect(outcome.isSuccess).toBe(false);
+  });
+
+  it('failure(fn) stores a (page, ctx) => Locator fn', () => {
+    const fn = (p: Page) => p.getByText('Error');
+    const outcome = Outcomes.failure(fn);
+    expect(outcome.locator).toBe(fn);
+    expect(outcome.isSuccess).toBe(false);
   });
 
   it('timeout() has sensible defaults', () => {
@@ -57,15 +67,23 @@ describe('Outcomes DSL', () => {
     expect(outcome.after).toBeUndefined();
   });
 
-  it('timeout({ after: n }) stores after', () => {
-    const outcome = Outcomes.timeout({ after: 5000 });
+  it('timeout(after) stores after and uses default name', () => {
+    const outcome = Outcomes.timeout(5000);
     expect(outcome.after).toBe(5000);
+    expect(outcome.name).toBe('timeout');
     expect(outcome.isTimeoutOutcome).toBe(true);
   });
 
-  it('timeout({ name }) uses provided name', () => {
-    const outcome = Outcomes.timeout({ name: 'timed-out' });
+  it('timeout(name) uses provided name', () => {
+    const outcome = Outcomes.timeout('timed-out');
     expect(outcome.name).toBe('timed-out');
+    expect(outcome.after).toBeUndefined();
+  });
+
+  it('timeout(name, after) uses both', () => {
+    const outcome = Outcomes.timeout('timed-out', 8000);
+    expect(outcome.name).toBe('timed-out');
+    expect(outcome.after).toBe(8000);
   });
 
   it('actionError() has sensible defaults', () => {
@@ -75,8 +93,8 @@ describe('Outcomes DSL', () => {
     expect(outcome.name).toBe('action-error');
   });
 
-  it('actionError({ name }) uses provided name', () => {
-    const outcome = Outcomes.actionError({ name: 'click-failed' });
+  it('actionError(name) uses provided name', () => {
+    const outcome = Outcomes.actionError('click-failed');
     expect(outcome.name).toBe('click-failed');
   });
 });

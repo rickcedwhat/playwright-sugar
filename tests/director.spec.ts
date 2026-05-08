@@ -35,9 +35,9 @@ const datasetPb = new Playbook('DatasetPlaybook', {
         await page.getByRole('button', { name: 'Create' }).click();
       },
       outcomes: [
-        Outcomes.success({ locator: page => page.getByText('This dataset is empty') }),
-        Outcomes.failure({ locator: page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i }) }),
-        Outcomes.timeout({ after: 10_000 }),
+        Outcomes.success(page => page.getByText('This dataset is empty')),
+        Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
+        Outcomes.timeout(10_000),
       ],
     }),
 
@@ -54,9 +54,9 @@ const datasetPb = new Playbook('DatasetPlaybook', {
         await page.getByRole('button', { name: 'Save' }).click();
       },
       outcomes: [
-        Outcomes.success({ text: 'Updated dataset' }),
-        Outcomes.failure({ locator: page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i }) }),
-        Outcomes.timeout({ after: 5000 }),
+        Outcomes.success(page => page.getByText('Updated dataset')),
+        Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
+        Outcomes.timeout(5000),
       ],
     })
     .cleanup(async (page, ctx) => {
