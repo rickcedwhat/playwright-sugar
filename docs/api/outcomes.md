@@ -1,6 +1,8 @@
 # Outcomes
 
-DSL for building outcome specs used by [`attemptAction`](/api/attempt-action) and [`Play.attempt()`](/api/play).
+Helpers for building outcome specs used by [`attemptAction`](/api/attempt-action) and [`Play.attempt()`](/api/play).
+
+You can define multiple `success` and `failure` outcomes. `timeout` and `actionError` are each limited to one — see [timeout and error behaviour](/api/attempt-action#timeout-and-error-behaviour) for details.
 
 ## Outcomes.success
 

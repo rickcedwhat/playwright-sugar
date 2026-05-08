@@ -42,14 +42,3 @@ Extra keys are available in every act function via `ctx`:
 })
 ```
 
-## .getPlay(name)
-
-Returns the play factory for the given name. Throws if the play doesn't exist.
-
-## .getPage()
-
-Returns the bound page. Throws if `.withCtx({ page })` has not been called.
-
-## .buildCtx()
-
-Returns an initial `PlayCtx` from the bound context with `state` and `result` initialised to `null`. Called internally by `Director`.

@@ -12,7 +12,7 @@ director.assertCan(
 ): Promise<PlayResult>
 ```
 
-Runs the named play and **throws** if it does not produce a success outcome. Use to assert that a user *can* perform an action.
+Runs the named play and returns the `PlayResult`. **Throws** if the play produces a failure outcome. Use to assert that a user *can* perform an action.
 
 ```ts
 const director = new Director();
@@ -31,7 +31,7 @@ director.assertCannot(
 ): Promise<PlayResult>
 ```
 
-Runs the named play and **throws** if it produces a success outcome. Use to assert that a user *cannot* perform an action.
+Runs the named play and returns the `PlayResult`. **Throws** if the play produces a success outcome. Use to assert that a user *cannot* perform an action.
 
 ```ts
 await page.goto('/?role=viewer');

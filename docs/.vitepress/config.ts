@@ -5,7 +5,6 @@ export default defineConfig({
   description: "Sweet utilities for Playwright automation",
   base: '/playwright-sugar/',
   themeConfig: {
-    logo: '/logo.png',
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'API', link: '/api/attempt-action' },

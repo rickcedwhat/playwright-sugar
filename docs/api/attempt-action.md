@@ -1,12 +1,12 @@
 # attemptAction
 
-Runs an optional action and waits for one of several named outcomes to appear. Returns the winning outcome rather than throwing, making it safe to branch on RBAC failures, toast messages, or missing UI elements.
+Runs an action and waits for one of several named outcomes to appear. Returns the winning outcome rather than throwing, making it safe to branch on RBAC failures, toast messages, or missing UI elements.
 
 ## Signature
 
 ```ts
 attemptAction(params: {
-  action?: () => Promise<void>;
+  action: () => Promise<void>;
   outcomes: Outcome[];
   timeout?: number;
 }): Promise<{ isSuccess: boolean; outcome: string; data?: unknown }>
@@ -14,9 +14,9 @@ attemptAction(params: {
 
 | Parameter | Type | Description |
 |---|---|---|
-| `action` | `() => Promise<void>` | Optional. The interaction to perform before waiting for outcomes. |
-| `outcomes` | `Outcome[]` | At least one outcome to watch for. Use the [`Outcomes`](/api/outcomes) DSL to build them. |
-| `timeout` | `number` | Overall timeout in ms. Overridden by an `Outcomes.timeout(after)` if present. |
+| `action` | `() => Promise<void>` | The interaction to perform before waiting for outcomes. |
+| `outcomes` | `Outcome[]` | At least one outcome to watch for. Use the [`Outcomes`](/api/outcomes) helpers to build them. |
+| `timeout` | `number` | Overall timeout in ms (default 30 000). Overridden by an `Outcomes.timeout(after)` if present. |
 
 ## Return value
 
@@ -25,6 +25,35 @@ attemptAction(params: {
 | `isSuccess` | `boolean` | `true` if the winning outcome was created with `Outcomes.success`. |
 | `outcome` | `string` | The name of the winning outcome. |
 | `data` | `unknown` | Optional data returned by the outcome's `onOutcome` callback. |
+
+## Timeout and error behaviour
+
+### `timeout` param vs `Outcomes.timeout`
+
+These two are related but distinct:
+
+- **`timeout` param** — how long to poll before giving up. If no `Outcomes.timeout` is defined and the clock expires, `attemptAction` **throws** an `Error` with a debug summary of every outcome it checked.
+- **`Outcomes.timeout(after)`** — captures the timeout as a *named outcome*. When defined, expiry resolves normally with `{ isSuccess: false, outcome: 'timeout' }` instead of throwing. The `after` value also sets the polling window, overriding the `timeout` param.
+
+The same distinction applies to action errors:
+
+- If the `action` throws and no `Outcomes.actionError` is defined, the error is swallowed and polling continues until the clock expires (then throws or resolves via `Outcomes.timeout`).
+- **`Outcomes.actionError(name?)`** — captures the throw as a named outcome so you can distinguish "button was missing" from "nothing happened in time."
+
+### One of each, many success/failures
+
+You can define at most one `Outcomes.timeout` and one `Outcomes.actionError`. Having multiple would be ambiguous — there is only one clock and one action. You *can* define as many `Outcomes.success` and `Outcomes.failure` outcomes as needed.
+
+```ts
+outcomes: [
+  Outcomes.success(page.getByText('Created')),
+  Outcomes.success(page.getByText('Already exists')),   // ✅ two successes fine
+  Outcomes.failure(page.getByText('Permission denied')),
+  Outcomes.failure(page.getByText('Quota exceeded')),   // ✅ two failures fine
+  Outcomes.actionError('trigger-missing'),               // ✅ one action error
+  Outcomes.timeout(5000),                               // ✅ one timeout
+]
+```
 
 ## Examples
 
@@ -45,7 +74,7 @@ const result = await attemptAction({
 expect(result.isSuccess).toBe(true);
 ```
 
-### Action error vs timeout
+### Distinguishing action error from timeout
 
 ```ts
 const result = await attemptAction({
@@ -59,15 +88,5 @@ const result = await attemptAction({
   ],
 });
 // result.outcome === 'button-missing' when the click throws
-```
-
-### No action (detect-only)
-
-```ts
-const result = await attemptAction({
-  outcomes: [
-    Outcomes.success(page.getByText('Welcome')),
-    Outcomes.failure(page.getByText('Session expired')),
-  ],
-});
+// result.outcome === 'timeout'        when the page just never shows 'Done'
 ```

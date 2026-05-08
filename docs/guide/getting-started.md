@@ -65,17 +65,16 @@ const itemPb = new Playbook('ItemPlaybook', {
     }),
 });
 
-test('admin can create item', async ({ page }) => {
+test('admin can create item', async ({ adminPage }) => {
   const director = new Director();
-  const pb = itemPb.withCtx({ page });
+  const pb = itemPb.withCtx({ page: adminPage });
 
   await director.assertCan(pb, 'create', { name: 'My Item' });
 });
 
-test('viewer cannot create item', async ({ page }) => {
-  await page.goto('/?role=viewer');
+test('viewer cannot create item', async ({ userPage }) => {
   const director = new Director();
-  const pb = itemPb.withCtx({ page });
+  const pb = itemPb.withCtx({ page: userPage });
 
   await director.assertCannot(pb, 'create', { name: 'Blocked Item' });
 });
@@ -88,11 +87,10 @@ Use `relator` to find an element relative to a unique anchor — avoids fragile 
 ```ts
 import { relator } from '@rickcedwhat/playwright-sugar';
 
-// Click the "Edit" button in the row that contains "Invoice #42"
+// Click "Edit" only in the card containing "Invoice #42"
 const editBtn = relator(
   page.getByText('Invoice #42'),
-  page.getByRole('button', { name: 'Edit' }),
-  'tr'
+  page.getByRole('button', { name: 'Edit' })
 );
 await editBtn.click();
 ```
