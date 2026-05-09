@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed (breaking)
+
+- **`attemptAction`** — signature is now positional: `attemptAction(action, outcomes, opts?)`. The previous single-object parameter is removed. Use `async () => {}` as the action when you only need to poll outcomes (or use **`detectPageState`**).
+- **`Play.attempt`** — optional third/fourth argument is now `AttemptActionOptions` (e.g. `{ timeout: 5000 }`) instead of a bare `timeout` number, aligned with `attemptAction`.
+
 ## [0.2.0] - 2026-05-08
 
 ### Added

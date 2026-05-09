@@ -12,8 +12,8 @@ test.describe('Playwright Simple POC', () => {
     const trigger = page.locator('#trigger');
     const success = page.locator('#success');
 
-    const result = await attemptAction({
-      action: async () => {
+    const result = await attemptAction(
+      async () => {
         await trigger.click();
         await page.evaluate(() => {
           setTimeout(() => {
@@ -21,11 +21,11 @@ test.describe('Playwright Simple POC', () => {
           }, 500);
         });
       },
-      outcomes: [
+      [
         { name: 'Success', locator: success, isSuccess: true }
       ],
-      timeout: 5000
-    });
+      { timeout: 5000 }
+    );
 
     expect(result.isSuccess).toBe(true);
     expect(result.outcome).toBe('Success');
@@ -40,13 +40,14 @@ test.describe('Playwright Simple POC', () => {
     const locatorA = page.locator('.result').first();
     const locatorB = page.locator('.result').last();
 
-    await expect(attemptAction({
-      outcomes: [
+    await expect(attemptAction(
+      async () => {},
+      [
         { name: 'A', locator: locatorA, isSuccess: true },
         { name: 'B', locator: locatorB, isSuccess: true }
       ],
-      timeout: 2000
-    })).rejects.toThrow('Ambiguous Page State');
+      { timeout: 2000 }
+    )).rejects.toThrow('Ambiguous Page State');
   });
 
   test('relator should scope correctly (Hybrid Mode)', async ({ page }) => {
@@ -125,9 +126,10 @@ test.describe('Playwright Simple POC', () => {
     await page.setContent('<div id="done">Done</div>');
     const done = page.locator('#done');
 
-    const result = await attemptAction({
-      outcomes: [{ name: 'done', locator: done, isSuccess: true }]
-    });
+    const result = await attemptAction(
+      async () => {},
+      [{ name: 'done', locator: done, isSuccess: true }]
+    );
 
     expect(result.isSuccess).toBe(true);
     expect(result.outcome).toBe('done');
@@ -137,10 +139,11 @@ test.describe('Playwright Simple POC', () => {
     await page.setContent('<div>Nothing here</div>');
     const missing = page.locator('#missing');
 
-    const promise = attemptAction({
-      outcomes: [{ name: 'Missing', locator: missing, isSuccess: true }],
-      timeout: 500
-    });
+    const promise = attemptAction(
+      async () => {},
+      [{ name: 'Missing', locator: missing, isSuccess: true }],
+      { timeout: 500 }
+    );
 
     await expect(promise).rejects.toThrow(/checked for:\n  - Missing/);
   });
@@ -153,10 +156,11 @@ test.describe('Playwright Simple POC', () => {
 
     const ambiguous = page.locator('.match');
 
-    await attemptAction({
-      outcomes: [{ name: 'Ambiguous', locator: ambiguous, isSuccess: true }],
-      timeout: 500
-    }).catch(() => {});
+    await attemptAction(
+      async () => {},
+      [{ name: 'Ambiguous', locator: ambiguous, isSuccess: true }],
+      { timeout: 500 }
+    ).catch(() => {});
   });
 
   test('Soft Trigger: Button Click Works (Success)', async ({ page }) => {
@@ -168,15 +172,15 @@ test.describe('Playwright Simple POC', () => {
     const runBtn = page.locator('#run');
     const successMsg = page.getByText('Job Started');
 
-    const result = await attemptAction({
-      action: async () => {
+    const result = await attemptAction(
+      async () => {
         await runBtn.click();
         await page.evaluate(() => {
           setTimeout(() => document.getElementById('success')!.style.display = 'block', 100);
         });
       },
-      outcomes: [{ name: 'Job Started', locator: successMsg, isSuccess: true }]
-    });
+      [{ name: 'Job Started', locator: successMsg, isSuccess: true }]
+    );
 
     expect(result.isSuccess).toBe(true);
     expect(result.outcome).toBe('Job Started');
@@ -191,17 +195,17 @@ test.describe('Playwright Simple POC', () => {
     const runBtn = page.locator('#run');
     const errorMsg = page.getByText('Access Denied');
 
-    const result = await attemptAction({
-      action: async () => {
+    const result = await attemptAction(
+      async () => {
         await runBtn.click();
         await page.evaluate(() => {
           setTimeout(() => document.getElementById('error')!.style.display = 'block', 100);
         });
       },
-      outcomes: [
+      [
         { name: 'Access Denied', locator: errorMsg, isSuccess: false }
       ]
-    });
+    );
 
     expect(result.isSuccess).toBe(false);
     expect(result.outcome).toBe('Access Denied');
@@ -210,16 +214,16 @@ test.describe('Playwright Simple POC', () => {
   test('Soft Trigger: Button Missing (Fallback to Timeout Outcome)', async ({ page }) => {
     await page.setContent('<div>No button here</div>');
 
-    const result = await attemptAction({
-      action: async () => {
+    const result = await attemptAction(
+      async () => {
         await page.locator('#missing-run-btn').click({ timeout: 500 });
       },
-      outcomes: [
+      [
         { name: 'Success State', locator: page.locator('#success'), isSuccess: true },
         { name: 'RBAC: Button Missing', isTimeoutOutcome: true, isSuccess: false }
       ],
-      timeout: 2000
-    });
+      { timeout: 2000 }
+    );
 
     expect(result.isSuccess).toBe(false);
     expect(result.outcome).toBe('RBAC: Button Missing');
@@ -233,18 +237,18 @@ test.describe('Playwright Simple POC', () => {
       { name: 'Action Failed', isActionErrorOutcome: true, isSuccess: false }
     ];
 
-    const res1 = await attemptAction({
-      action: async () => { throw new Error('Boom'); },
+    const res1 = await attemptAction(
+      async () => { throw new Error('Boom'); },
       outcomes,
-      timeout: 500
-    });
+      { timeout: 500 }
+    );
     expect(res1.outcome).toBe('Action Failed');
 
-    const res2 = await attemptAction({
-      action: async () => {},
+    const res2 = await attemptAction(
+      async () => {},
       outcomes,
-      timeout: 500
-    });
+      { timeout: 500 }
+    );
     expect(res2.outcome).toBe('Timed Out');
   });
 

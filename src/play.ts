@@ -1,7 +1,9 @@
 import type { Page } from '@playwright/test';
 import { attemptAction, detectPageState } from './attemptAction.js';
-import type { Outcome } from './attemptAction.js';
+import type { AttemptActionOptions, Outcome } from './attemptAction.js';
 import type { OutcomeSpec } from './outcomes.js';
+
+export type { AttemptActionOptions } from './attemptAction.js';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -41,7 +43,7 @@ type ActRecord =
       name: string;
       trigger: ActFn;
       outcomes: OutcomeSpec[];
-      timeout?: number;
+      opts?: AttemptActionOptions;
     }
   | { kind: 'cleanup'; fn: ActFn; skip: boolean }
   | { kind: 'reload'; opts: Parameters<Page['reload']>[0] | undefined; skip: boolean };
@@ -86,38 +88,38 @@ export class Play {
     });
   }
 
-  attempt(trigger: ActFn, outcomes: OutcomeSpec[], timeout?: number): Play;
-  attempt(name: string, trigger: ActFn, outcomes: OutcomeSpec[], timeout?: number): Play;
+  attempt(trigger: ActFn, outcomes: OutcomeSpec[], opts?: AttemptActionOptions): Play;
+  attempt(name: string, trigger: ActFn, outcomes: OutcomeSpec[], opts?: AttemptActionOptions): Play;
   attempt(
     nameOrTrigger: string | ActFn,
     triggerOrOutcomes: ActFn | OutcomeSpec[],
-    outcomesOrTimeout?: OutcomeSpec[] | number,
-    maybeTimeout?: number
+    outcomesOrOpts?: OutcomeSpec[] | AttemptActionOptions,
+    maybeOpts?: AttemptActionOptions
   ): Play {
     if (typeof nameOrTrigger === 'string') {
       const name = nameOrTrigger;
       const trigger = triggerOrOutcomes as ActFn;
-      const outcomes = outcomesOrTimeout as OutcomeSpec[];
-      const timeout = maybeTimeout;
+      const outcomes = outcomesOrOpts as OutcomeSpec[];
+      const opts = maybeOpts;
       return this._append({
         kind: 'attempt',
         name,
         trigger,
         outcomes,
-        ...(timeout !== undefined && { timeout }),
+        ...(opts !== undefined && { opts }),
       });
     }
 
     const trigger = nameOrTrigger as ActFn;
     const outcomes = triggerOrOutcomes as OutcomeSpec[];
-    const timeout = typeof outcomesOrTimeout === 'number' ? outcomesOrTimeout : undefined;
+    const opts = outcomesOrOpts as AttemptActionOptions | undefined;
 
     return this._append({
       kind: 'attempt',
       name: 'attempt',
       trigger,
       outcomes,
-      ...(timeout !== undefined && { timeout }),
+      ...(opts !== undefined && { opts }),
     });
   }
 
@@ -191,15 +193,15 @@ export class Play {
             }));
 
             const timeoutOutcome = act.outcomes.find(o => o.isTimeoutOutcome);
-            const timeout = act.timeout ?? timeoutOutcome?.after;
+            const resolvedTimeout = act.opts?.timeout ?? timeoutOutcome?.after;
+            const attemptOpts: AttemptActionOptions | undefined =
+              resolvedTimeout !== undefined ? { ...act.opts, timeout: resolvedTimeout } : act.opts;
 
-            const attemptParams: Parameters<typeof attemptAction>[0] = {
-              action: () => act.trigger(page, ctx),
-              outcomes: resolvedOutcomes,
-            };
-            if (timeout !== undefined) attemptParams.timeout = timeout;
-
-            const result = await attemptAction(attemptParams);
+            const result = await attemptAction(
+              () => act.trigger(page, ctx),
+              resolvedOutcomes,
+              attemptOpts
+            );
             ctx['result'] = result;
 
             const ms = Date.now() - t;

@@ -17,16 +17,16 @@ Use `attemptAction` when an action can produce multiple outcomes — success, fa
 ```ts
 import { attemptAction, Outcomes } from '@rickcedwhat/playwright-sugar';
 
-const result = await attemptAction({
-  action: async () => {
+const result = await attemptAction(
+  async () => {
     await page.getByRole('button', { name: 'Delete' }).click();
   },
-  outcomes: [
+  [
     Outcomes.success(page.getByText('Deleted successfully')),
     Outcomes.failure(page.getByText('Permission denied')),
     Outcomes.timeout(5000),
   ],
-});
+);
 
 if (result.isSuccess) {
   // item was deleted
