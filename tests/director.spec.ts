@@ -9,6 +9,7 @@ import { Director, Playbook, Play, Outcomes, SyncStrategy } from '../src/index.j
 type ExistsParams = { name: string; withReload?: boolean };
 type CreateParams = { name: string };
 type UpdateParams = { name: string; newName: string };
+type DeleteParams = { name: string };
 
 const datasetPb = new Playbook('DatasetPlaybook', {
 
@@ -71,6 +72,21 @@ const datasetPb = new Playbook('DatasetPlaybook', {
         await page.keyboard.press('Escape');
       }
     }),
+
+  delete: ({ name }: DeleteParams) => new Play()
+    .nav(async page => { await page.getByRole('button', { name: 'Datasets' }).click(); })
+    .prep(async page => {
+      await page.locator(`tr:has-text("${name}")`).getByRole('button', { name: 'Row actions' }).click();
+      await page.getByRole('menuitem', { name: 'Delete' }).click();
+    })
+    .attempt(
+      async () => {},
+      [
+        Outcomes.success(page => page.getByText('Deleted dataset')),
+        Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
+        Outcomes.timeout(5000),
+      ],
+    ),
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -159,6 +175,32 @@ test('assertCannot: viewer cannot rename dataset, cleanup presses Escape', async
   // Dataset name is unchanged
   await page.getByRole('button', { name: 'Datasets' }).click();
   await expect(page.locator('tr:has-text("Protected Dataset")')).toBeVisible();
+});
+
+test('assertCan: admin deletes dataset', async ({ page }) => {
+  await seedDataset(page, 'Delete Me');
+
+  const director = new Director();
+  const pb = datasetPb.withCtx({ page });
+
+  await director.assertCan(pb, 'delete', { name: 'Delete Me' });
+
+  await page.getByRole('button', { name: 'Datasets' }).click();
+  await expect(page.locator('tr:has-text("Delete Me")')).not.toBeVisible();
+});
+
+test('assertCannot: viewer cannot delete dataset', async ({ page }) => {
+  await seedDataset(page, 'Protected Delete');
+  await page.goto('/?role=viewer');
+
+  const director = new Director();
+  const pb = datasetPb.withCtx({ page });
+
+  const result = await director.assertCannot(pb, 'delete', { name: 'Protected Delete' });
+  expect(result.isSuccess).toBe(false);
+
+  await page.getByRole('button', { name: 'Datasets' }).click();
+  await expect(page.locator('tr:has-text("Protected Delete")')).toBeVisible();
 });
 
 // ── ensureExists ──────────────────────────────────────────────────────────────
