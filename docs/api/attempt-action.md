@@ -1,6 +1,6 @@
 # attemptAction
 
-Runs a **required** trigger action, then waits for one of several named outcomes to appear. Returns the winning outcome rather than throwing in common cases, making it practical to branch on RBAC failures, toast messages, or missing UI elements.
+Runs a **required** action, then waits for one of several named outcomes to appear. Returns the winning outcome rather than throwing in common cases, making it practical to branch on RBAC failures, toast messages, or missing UI elements.
 
 ## Signature
 
@@ -57,7 +57,7 @@ const result = await attemptAction(
 );
 ```
 
-### Detect-only (no meaningful trigger)
+### Detect-only (no meaningful action)
 
 Use a no-op action when you only want to poll for a state:
 
@@ -92,7 +92,7 @@ const result = await attemptAction(
 
 ## `detectPageState`
 
-For “wait until one of these locators wins” without a trigger, use `detectPageState` (implemented with a no-op `attemptAction`):
+For “wait until one of these locators wins” without running an action, use `detectPageState` (implemented with a no-op `attemptAction`):
 
 ```ts
 const result = await detectPageState({

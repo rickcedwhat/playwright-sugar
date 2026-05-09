@@ -47,7 +47,7 @@ new Play().detect(page => [
 
 `ctx.state` is set to `{ name, isSuccess, data }` after detect runs.
 
-### .attempt(trigger, outcomes, opts?)  /  .attempt(name, trigger, outcomes, opts?)
+### .attempt(action, outcomes, opts?)  /  .attempt(name, action, outcomes, opts?)
 
 Performs an action and waits for an outcome. The optional third/fourth argument is an [`AttemptActionOptions`](/api/attempt-action) object — same shape as `attemptAction(..., opts)` (e.g. `{ timeout }`), with room for future flags.
 

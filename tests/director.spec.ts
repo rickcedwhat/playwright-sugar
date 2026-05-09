@@ -50,7 +50,7 @@ const datasetPb = new Playbook('DatasetPlaybook', {
     })
     .attempt(
       async page => {
-        // For viewer: no textbox appears (rename blocked by role check), trigger fails softly
+        // For viewer: no textbox appears (rename blocked by role check), action fails softly
         await page.getByRole('textbox').fill(newName, { timeout: 2000 });
         await page.getByRole('button', { name: 'Save' }).click();
       },

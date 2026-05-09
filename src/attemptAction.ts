@@ -147,7 +147,7 @@ ${errorMsg}
 
   let errorMessage = `Action timed out: None of the expected outcomes occurred within ${timeout}ms. \nchecked for:${debugList}`;
   if (actionError) {
-    errorMessage += `\n\nNOTE: The trigger action also failed with: ${actionError.message}`;
+    errorMessage += `\n\nNOTE: The action also failed with: ${actionError.message}`;
   }
 
   throw new Error(errorMessage);

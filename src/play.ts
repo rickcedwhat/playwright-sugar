@@ -41,7 +41,7 @@ type ActRecord =
   | {
       kind: 'attempt';
       name: string;
-      trigger: ActFn;
+      action: ActFn;
       outcomes: OutcomeSpec[];
       opts?: AttemptActionOptions;
     }
@@ -88,36 +88,36 @@ export class Play {
     });
   }
 
-  attempt(trigger: ActFn, outcomes: OutcomeSpec[], opts?: AttemptActionOptions): Play;
-  attempt(name: string, trigger: ActFn, outcomes: OutcomeSpec[], opts?: AttemptActionOptions): Play;
+  attempt(action: ActFn, outcomes: OutcomeSpec[], opts?: AttemptActionOptions): Play;
+  attempt(name: string, action: ActFn, outcomes: OutcomeSpec[], opts?: AttemptActionOptions): Play;
   attempt(
-    nameOrTrigger: string | ActFn,
-    triggerOrOutcomes: ActFn | OutcomeSpec[],
+    nameOrAction: string | ActFn,
+    actionOrOutcomes: ActFn | OutcomeSpec[],
     outcomesOrOpts?: OutcomeSpec[] | AttemptActionOptions,
     maybeOpts?: AttemptActionOptions
   ): Play {
-    if (typeof nameOrTrigger === 'string') {
-      const name = nameOrTrigger;
-      const trigger = triggerOrOutcomes as ActFn;
+    if (typeof nameOrAction === 'string') {
+      const name = nameOrAction;
+      const action = actionOrOutcomes as ActFn;
       const outcomes = outcomesOrOpts as OutcomeSpec[];
       const opts = maybeOpts;
       return this._append({
         kind: 'attempt',
         name,
-        trigger,
+        action,
         outcomes,
         ...(opts !== undefined && { opts }),
       });
     }
 
-    const trigger = nameOrTrigger as ActFn;
-    const outcomes = triggerOrOutcomes as OutcomeSpec[];
+    const action = nameOrAction as ActFn;
+    const outcomes = actionOrOutcomes as OutcomeSpec[];
     const opts = outcomesOrOpts as AttemptActionOptions | undefined;
 
     return this._append({
       kind: 'attempt',
       name: 'attempt',
-      trigger,
+      action,
       outcomes,
       ...(opts !== undefined && { opts }),
     });
@@ -198,7 +198,7 @@ export class Play {
               resolvedTimeout !== undefined ? { ...act.opts, timeout: resolvedTimeout } : act.opts;
 
             const result = await attemptAction(
-              () => act.trigger(page, ctx),
+              () => act.action(page, ctx),
               resolvedOutcomes,
               attemptOpts
             );
