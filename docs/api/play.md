@@ -10,7 +10,7 @@ new Play()
 
 ## Step builders
 
-All builders accept an optional `ActOptions` as their last argument: `{ skip?: boolean }`.
+All builders except `.attempt()` accept an optional `ActOptions` as their last argument: `{ skip?: boolean }`.
 
 ### .nav(fn, opts?)
 
@@ -47,27 +47,57 @@ new Play().detect(page => [
 
 `ctx.state` is set to `{ name, isSuccess, data }` after detect runs.
 
-### .attempt(config, opts?)  /  .attempt(name, config, opts?)
+### .attempt(trigger, outcomes, timeout?)  /  .attempt(name, trigger, outcomes, timeout?)
 
 Performs an action and waits for an outcome.
 
+**Unnamed attempt** (logged as `attempt`):
+
 ```ts
-new Play().attempt({
-  trigger: async (page, ctx) => {
+new Play().attempt(
+  async (page, ctx) => {
     const btn = ctx['state']?.name === 'empty' ? 'Empty item' : 'Item';
     await page.getByRole('button', { name: btn }).click();
     await page.getByPlaceholder('Name').fill('My Item');
     await page.getByRole('button', { name: 'Create' }).click();
   },
-  outcomes: [
+  [
     Outcomes.success(p => p.getByText('Item created')),
     Outcomes.failure(p => p.getByText('Permission denied')),
     Outcomes.timeout(8000),
   ],
-})
+)
+```
+
+**Named attempt** (logged under the given name, e.g. for clearer errors):
+
+```ts
+new Play().attempt(
+  'submit',
+  async page => {
+    await page.getByRole('button', { name: 'Save' }).click();
+  },
+  [
+    Outcomes.success(page => page.getByText('Saved')),
+    Outcomes.failure(page => page.getByText('Validation failed')),
+    Outcomes.timeout(5000),
+  ],
+)
 ```
 
 `ctx.result` is set to `{ isSuccess, outcome, data }` after the attempt.
+
+#### Timeout semantics
+
+Timeouts are resolved in this order:
+
+1. **Positional `timeout`** (third argument on the unnamed overload, fourth on the named overload): passed through to `attemptAction` as the polling budget. If no locator outcome wins before this limit **and** there is **no** `Outcomes.timeout()` outcome in the list, `attemptAction` throws (hard timeout).
+
+2. **`Outcomes.timeout(after)`** (soft timeout outcome): supplies an `after` value used as the polling budget **when** no explicit positional timeout is provided. If the timer expires without another locator winning, the winner is the timeout **outcome** — resolution completes normally and `ctx.result` reflects that outcome (typically `isSuccess: false`), rather than throwing.
+
+3. **Default** (30 seconds): used when neither a positional timeout nor a timeout outcome with an `after` value applies.
+
+Whether expiry throws or returns a named outcome depends on your outcome list: include `Outcomes.timeout(...)` when you want a soft, named timeout path; rely on positional timeout alone when unmatched states should fail the step with an error.
 
 ### .cleanup(fn, opts?)
 

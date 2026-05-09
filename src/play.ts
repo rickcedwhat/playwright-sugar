@@ -31,19 +31,18 @@ type DetectCandidate = {
   locator?: import('@playwright/test').Locator;
 };
 
-type AttemptConfig = {
-  trigger: ActFn;
-  outcomes: OutcomeSpec[];
-  /** Optional explicit timeout. If omitted, Play derives it from the timeout outcome's .after field. */
-  timeout?: number;
-};
-
 // ── Internal act record (discriminated union) ─────────────────────────────────
 
 type ActRecord =
   | { kind: 'act'; name: string; fn: ActFn; skip: boolean }
   | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; skip: boolean }
-  | { kind: 'attempt'; name: string; config: AttemptConfig; skip: boolean }
+  | {
+      kind: 'attempt';
+      name: string;
+      trigger: ActFn;
+      outcomes: OutcomeSpec[];
+      timeout?: number;
+    }
   | { kind: 'cleanup'; fn: ActFn; skip: boolean }
   | { kind: 'reload'; opts: Parameters<Page['reload']>[0] | undefined; skip: boolean };
 
@@ -87,20 +86,39 @@ export class Play {
     });
   }
 
-  attempt(config: AttemptConfig, opts?: ActOptions): Play;
-  attempt(name: string, config: AttemptConfig, opts?: ActOptions): Play;
+  attempt(trigger: ActFn, outcomes: OutcomeSpec[], timeout?: number): Play;
+  attempt(name: string, trigger: ActFn, outcomes: OutcomeSpec[], timeout?: number): Play;
   attempt(
-    nameOrConfig: string | AttemptConfig,
-    configOrOpts?: AttemptConfig | ActOptions,
-    opts?: ActOptions
+    nameOrTrigger: string | ActFn,
+    triggerOrOutcomes: ActFn | OutcomeSpec[],
+    outcomesOrTimeout?: OutcomeSpec[] | number,
+    maybeTimeout?: number
   ): Play {
-    if (typeof nameOrConfig === 'string') {
-      const config = configOrOpts as AttemptConfig;
-      return this._append({ kind: 'attempt', name: nameOrConfig, config, skip: opts?.skip ?? false });
+    if (typeof nameOrTrigger === 'string') {
+      const name = nameOrTrigger;
+      const trigger = triggerOrOutcomes as ActFn;
+      const outcomes = outcomesOrTimeout as OutcomeSpec[];
+      const timeout = maybeTimeout;
+      return this._append({
+        kind: 'attempt',
+        name,
+        trigger,
+        outcomes,
+        ...(timeout !== undefined && { timeout }),
+      });
     }
-    const config = nameOrConfig;
-    const options = configOrOpts as ActOptions | undefined;
-    return this._append({ kind: 'attempt', name: 'attempt', config, skip: options?.skip ?? false });
+
+    const trigger = nameOrTrigger as ActFn;
+    const outcomes = triggerOrOutcomes as OutcomeSpec[];
+    const timeout = typeof outcomesOrTimeout === 'number' ? outcomesOrTimeout : undefined;
+
+    return this._append({
+      kind: 'attempt',
+      name: 'attempt',
+      trigger,
+      outcomes,
+      ...(timeout !== undefined && { timeout }),
+    });
   }
 
   cleanup(fn: ActFn, opts: ActOptions = {}): Play {
@@ -125,7 +143,7 @@ export class Play {
     for (const act of mainActs) {
       const actName = _actLabel(act);
 
-      if (act.skip || runError) {
+      if (runError || (act.kind !== 'attempt' && act.skip)) {
         console.log(`  ⏭  ${actName}  SKIPPED`);
         continue;
       }
@@ -161,7 +179,7 @@ export class Play {
 
           case 'attempt': {
             attemptReached = true;
-            const resolvedOutcomes: Outcome[] = act.config.outcomes.map(o => ({
+            const resolvedOutcomes: Outcome[] = act.outcomes.map(o => ({
               name: o.name,
               isSuccess: o.isSuccess,
               ...(o.isTimeoutOutcome && { isTimeoutOutcome: true }),
@@ -172,13 +190,13 @@ export class Play {
               }),
             }));
 
-            const timeoutOutcome = act.config.outcomes.find(o => o.isTimeoutOutcome);
+            const timeoutOutcome = act.outcomes.find(o => o.isTimeoutOutcome);
             const timeout =
-              act.config.timeout ??
+              act.timeout ??
               (timeoutOutcome?.after !== undefined ? timeoutOutcome.after : undefined);
 
             const attemptParams: Parameters<typeof attemptAction>[0] = {
-              action: () => act.config.trigger(page, ctx),
+              action: () => act.trigger(page, ctx),
               outcomes: resolvedOutcomes,
             };
             if (timeout !== undefined) attemptParams.timeout = timeout;
