@@ -18,7 +18,7 @@ const labOrigin = import.meta.env.VITE_LAB_ORIGIN ?? 'http://localhost:5173';
 
 const iframeSrc = computed(() => {
   const base = labOrigin.replace(/\/$/, '');
-  const q = props.query.trim();
+  const q = props.query.trim().replace(/^\?+/, '');
   return q ? `${base}/?${q}` : `${base}/`;
 });
 </script>

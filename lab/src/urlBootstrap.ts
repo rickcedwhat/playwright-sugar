@@ -18,7 +18,8 @@ export function applySugarLabUrlOverrides(): void {
     const seed = p.get('seed')?.trim();
     if (seed) {
       const raw = localStorage.getItem('sugar-lab-datasets');
-      const rows: { id: string; name: string }[] = raw ? JSON.parse(raw) : [];
+      const parsed = raw ? JSON.parse(raw) : [];
+      const rows: { id: string; name: string }[] = Array.isArray(parsed) ? parsed : [];
       rows.push({ id: crypto.randomUUID(), name: seed });
       localStorage.setItem('sugar-lab-datasets', JSON.stringify(rows));
     }
