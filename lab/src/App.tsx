@@ -5,6 +5,7 @@ import DatasetsPage from './DatasetsPage';
 import DatasetDetailPage from './DatasetDetailPage';
 import SettingsPage from './SettingsPage';
 import LeaveDialog from './LeaveDialog';
+import { parseInitialRouteFromUrl } from './urlBootstrap';
 
 export type Dataset = { id: string; name: string };
 
@@ -27,7 +28,7 @@ function saveDatasets(datasets: Dataset[]) {
 
 export default function App() {
   const [datasets, setDatasets] = useState<Dataset[]>(loadDatasets);
-  const [route, setRoute] = useState<Route>({ view: 'datasets' });
+  const [route, setRoute] = useState<Route>(() => parseInitialRouteFromUrl());
   // true when the rename form is open — blocks navigation
   const [dirty, setDirty] = useState(false);
   const [pendingRoute, setPendingRoute] = useState<Route | null>(null);

@@ -96,3 +96,7 @@ const editBtn = relator(
 );
 await editBtn.click();
 ```
+
+## Try the Sugar Lab
+
+The repo includes a small **Sugar Lab** app (Vite + React) used by integration tests. You can run it locally and follow [Sugar Lab (live)](/guide/sugar-lab) for embedded examples (`?role=viewer`, empty vs seeded data, and more).

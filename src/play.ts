@@ -191,9 +191,7 @@ export class Play {
             }));
 
             const timeoutOutcome = act.outcomes.find(o => o.isTimeoutOutcome);
-            const timeout =
-              act.timeout ??
-              (timeoutOutcome?.after !== undefined ? timeoutOutcome.after : undefined);
+            const timeout = act.timeout ?? timeoutOutcome?.after;
 
             const attemptParams: Parameters<typeof attemptAction>[0] = {
               action: () => act.trigger(page, ctx),
