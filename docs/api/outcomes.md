@@ -54,7 +54,7 @@ Outcomes.timeout('rbac-missing', 5000)
 Outcomes.actionError(name?: string): OutcomeSpec
 ```
 
-Resolves when the `action` function throws (e.g. a button was missing). Useful to distinguish a missing trigger from a true timeout.
+Resolves when the `action` function throws (e.g. a button was missing). Useful to distinguish a missing action from a true timeout.
 
 ```ts
 Outcomes.actionError()

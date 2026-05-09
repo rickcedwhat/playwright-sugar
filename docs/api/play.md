@@ -47,9 +47,9 @@ new Play().detect(page => [
 
 `ctx.state` is set to `{ name, isSuccess, data }` after detect runs.
 
-### .attempt(trigger, outcomes, timeout?)  /  .attempt(name, trigger, outcomes, timeout?)
+### .attempt(action, outcomes, opts?)  /  .attempt(name, action, outcomes, opts?)
 
-Performs an action and waits for an outcome.
+Performs an action and waits for an outcome. The optional third/fourth argument is an [`AttemptActionOptions`](/api/attempt-action) object — same shape as `attemptAction(..., opts)` (e.g. `{ timeout }`), with room for future flags.
 
 **Unnamed attempt** (logged as `attempt`):
 
@@ -66,6 +66,16 @@ new Play().attempt(
     Outcomes.failure(p => p.getByText('Permission denied')),
     Outcomes.timeout(8000),
   ],
+)
+```
+
+**With an explicit hard timeout budget:**
+
+```ts
+new Play().attempt(
+  async page => { /* ... */ },
+  [Outcomes.success(p => p.getByText('Done')), Outcomes.timeout(12_000)],
+  { timeout: 15_000 },
 )
 ```
 
@@ -91,13 +101,13 @@ new Play().attempt(
 
 Timeouts are resolved in this order:
 
-1. **Positional `timeout`** (third argument on the unnamed overload, fourth on the named overload): passed through to `attemptAction` as the polling budget. If no locator outcome wins before this limit **and** there is **no** `Outcomes.timeout()` outcome in the list, `attemptAction` throws (hard timeout).
+1. **`opts.timeout`**: passed through to `attemptAction` as the polling budget. If no locator outcome wins before this limit **and** there is **no** `Outcomes.timeout()` outcome in the list, `attemptAction` throws (hard timeout).
 
-2. **`Outcomes.timeout(after)`** (soft timeout outcome): supplies an `after` value used as the polling budget **when** no explicit positional timeout is provided. If the timer expires without another locator winning, the winner is the timeout **outcome** — resolution completes normally and `ctx.result` reflects that outcome (typically `isSuccess: false`), rather than throwing.
+2. **`Outcomes.timeout(after)`** (soft timeout outcome): supplies an `after` value used as the polling budget **when** `opts.timeout` is not set. If the timer expires without another locator winning, the winner is the timeout **outcome** — resolution completes normally and `ctx.result` reflects that outcome (typically `isSuccess: false`), rather than throwing.
 
-3. **Default** (30 seconds): used when neither a positional timeout nor a timeout outcome with an `after` value applies.
+3. **Default** (30 seconds): used when neither `opts.timeout` nor a timeout outcome with an `after` value applies.
 
-Whether expiry throws or returns a named outcome depends on your outcome list: include `Outcomes.timeout(...)` when you want a soft, named timeout path; rely on positional timeout alone when unmatched states should fail the step with an error.
+Whether expiry throws or returns a named outcome depends on your outcome list: include `Outcomes.timeout(...)` when you want a soft, named timeout path; rely on `opts.timeout` alone when unmatched states should fail the step with an error.
 
 ### .cleanup(fn, opts?)
 

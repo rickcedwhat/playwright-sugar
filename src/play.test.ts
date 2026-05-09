@@ -299,7 +299,7 @@ describe('.attempt() locator resolution', () => {
     (page.getByText as unknown as MockInstance).mockReturnValue(resolvedLocator);
 
     let capturedOutcomes: unknown;
-    mockAttemptAction.mockImplementationOnce(async ({ outcomes }) => {
+    mockAttemptAction.mockImplementationOnce(async (_a, outcomes) => {
       capturedOutcomes = outcomes;
       return { isSuccess: true, outcome: 'success', data: undefined };
     });
@@ -336,8 +336,8 @@ describe('.attempt() locator resolution', () => {
   it('passes the timeout outcome .after value to attemptAction', async () => {
     const page = makePage();
     let capturedTimeout: unknown;
-    mockAttemptAction.mockImplementationOnce(async ({ timeout }) => {
-      capturedTimeout = timeout;
+    mockAttemptAction.mockImplementationOnce(async (_a, _o, opts) => {
+      capturedTimeout = opts?.timeout;
       return { isSuccess: true, outcome: 'ok', data: undefined };
     });
 
@@ -351,18 +351,18 @@ describe('.attempt() locator resolution', () => {
     expect(capturedTimeout).toBe(8000);
   });
 
-  it('passes positional timeout as the third argument to attemptAction', async () => {
+  it('passes opts.timeout to attemptAction', async () => {
     const page = makePage();
     let capturedTimeout: unknown;
-    mockAttemptAction.mockImplementationOnce(async ({ timeout }) => {
-      capturedTimeout = timeout;
+    mockAttemptAction.mockImplementationOnce(async (_a, _o, opts) => {
+      capturedTimeout = opts?.timeout;
       return { isSuccess: true, outcome: 'ok', data: undefined };
     });
 
     const play = new Play().attempt(
       async () => {},
       [Outcomes.success(p => p.getByText('done')), Outcomes.timeout(9999)],
-      12_000
+      { timeout: 12_000 }
     );
 
     await play.run('label', { page, state: null, result: null });
@@ -370,11 +370,11 @@ describe('.attempt() locator resolution', () => {
     expect(capturedTimeout).toBe(12_000);
   });
 
-  it('uses named overload with positional timeout', async () => {
+  it('uses named overload with opts.timeout', async () => {
     const page = makePage();
     let capturedTimeout: unknown;
-    mockAttemptAction.mockImplementationOnce(async ({ timeout }) => {
-      capturedTimeout = timeout;
+    mockAttemptAction.mockImplementationOnce(async (_a, _o, opts) => {
+      capturedTimeout = opts?.timeout;
       return { isSuccess: true, outcome: 'ok', data: undefined };
     });
 
@@ -382,7 +382,7 @@ describe('.attempt() locator resolution', () => {
       'named-step',
       async () => {},
       [Outcomes.success(mockLocator)],
-      7000
+      { timeout: 7000 }
     );
 
     await play.run('label', { page, state: null, result: null });

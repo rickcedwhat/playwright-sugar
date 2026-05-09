@@ -23,19 +23,19 @@ npm install @rickcedwhat/playwright-sugar
 ## Core API
 
 ### 1. `attemptAction` & `detectPageState`
-The crown jewel of the library. It races multiple outcomes against each other and handles trigger failures gracefully.
+The crown jewel of the library. It races multiple outcomes against each other and handles action failures gracefully.
 
 ```typescript
 import { attemptAction, Outcomes } from '@rickcedwhat/playwright-sugar';
 
-const { isSuccess, outcome } = await attemptAction({
-  action: async () => { await page.getByRole('button', { name: 'Run' }).click(); },
-  outcomes: [
+const { isSuccess, outcome } = await attemptAction(
+  async () => { await page.getByRole('button', { name: 'Run' }).click(); },
+  [
     Outcomes.success('Started', page.getByText('Job Started Successfully')),
     Outcomes.failure('Blocked', page.getByText('You do not have permission')),
     Outcomes.actionError('RBAC: Button Missing') // Fallback if click fails
   ]
-});
+);
 ```
 
 **Features:**

@@ -9,22 +9,26 @@ export type Outcome = {
   onOutcome?: (winner: Locator) => Promise<unknown>;
 };
 
-export async function attemptAction(params: {
-  action?: () => Promise<void>;
-  outcomes: Outcome[];
+/** Options for `attemptAction` / `Play.attempt` — extend with future flags without breaking the positional API. */
+export type AttemptActionOptions = {
   timeout?: number;
-}): Promise<{ isSuccess: boolean; outcome: string; data: unknown }> {
-  const { action, outcomes: normalizedOutcomes, timeout = 30000 } = params;
+};
+
+export async function attemptAction(
+  action: () => Promise<void>,
+  outcomes: Outcome[],
+  opts?: AttemptActionOptions
+): Promise<{ isSuccess: boolean; outcome: string; data?: unknown }> {
+  const normalizedOutcomes = outcomes;
+  const timeout = opts?.timeout ?? 30000;
 
   // Trigger Phase: Soft Trigger implementation
   let actionError: Error | undefined;
-  if (action) {
-    try {
-      await action();
-    } catch (e: any) {
-      actionError = e;
-      console.warn(`[attemptAction] Trigger action failed, proceeding to outcome detection. Error: ${e.message}`);
-    }
+  try {
+    await action();
+  } catch (e: any) {
+    actionError = e;
+    console.warn(`[attemptAction] Trigger action failed, proceeding to outcome detection. Error: ${e.message}`);
   }
 
   const startTime = Date.now();
@@ -118,27 +122,32 @@ ${errorMsg}
   }
 
   // Timeout Handling
-  // If action failed, we prioritize isActionErrorOutcome. 
-  // Otherwise, we use isTimeoutOutcome.
   const timeoutOutcome = actionError 
     ? (normalizedOutcomes.find((o) => o.isActionErrorOutcome) || normalizedOutcomes.find((o) => o.isTimeoutOutcome))
     : normalizedOutcomes.find((o) => o.isTimeoutOutcome);
 
   if (timeoutOutcome) {
+    const data = timeoutOutcome.onOutcome
+      ? await timeoutOutcome.onOutcome(null as any)
+      : undefined;
+      
     return {
       isSuccess: timeoutOutcome.isSuccess,
       outcome: timeoutOutcome.name,
-      data: undefined,
+      data,
     };
   }
 
   const debugList = normalizedOutcomes
-    .map((o) => `\n  - ${o.name}: ${o.locator?.toString() ?? 'N/A'}`)
-    .join('');
+    .map(
+      (o) =>
+        `\n  - ${o.name}: ${o.locator ? (typeof o.locator === "function" ? "<async locator>" : o.locator.toString()) : "N/A"}`
+    )
+    .join("");
 
   let errorMessage = `Action timed out: None of the expected outcomes occurred within ${timeout}ms. \nchecked for:${debugList}`;
   if (actionError) {
-    errorMessage += `\n\nNOTE: The trigger action also failed with: ${actionError.message}`;
+    errorMessage += `\n\nNOTE: The action also failed with: ${actionError.message}`;
   }
 
   throw new Error(errorMessage);
@@ -148,8 +157,9 @@ export async function detectPageState(params: {
   outcomes: Outcome[];
   timeout?: number;
 }) {
-  return attemptAction({
-    outcomes: params.outcomes,
-    timeout: params.timeout ?? 5000,
-  });
+  return attemptAction(
+    async () => {},
+    params.outcomes,
+    { timeout: params.timeout ?? 5000 }
+  );
 }
