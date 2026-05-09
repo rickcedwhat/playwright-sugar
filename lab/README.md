@@ -18,6 +18,18 @@ Append `?role=viewer` to any URL to switch to viewer mode. In viewer mode, click
 http://localhost:5173/?role=viewer
 ```
 
+## URL presets (docs / iframes)
+
+These run **before** the first render so links and embedded demos are reproducible:
+
+| Param | Effect |
+|-------|--------|
+| `clear=1` | Remove persisted datasets (`sugar-lab-datasets`) so the list starts empty. |
+| `seed=<name>` | Append one dataset row (combine with `clear=1` for a single known row). |
+| `view=settings` | Open the Settings view instead of Datasets. |
+
+Example: `/?clear=1&seed=Demo&role=viewer`
+
 ## Scenarios
 
 ### Datasets page — Issue #10 (Playbook / Director)

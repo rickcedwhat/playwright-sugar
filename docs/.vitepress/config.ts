@@ -8,6 +8,7 @@ export default defineConfig({
     logo: '/logo.png',
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Sugar Lab', link: '/guide/sugar-lab' },
       { text: 'API', link: '/api/attempt-action' },
       { text: 'GitHub', link: 'https://github.com/rickcedwhat/playwright-sugar' }
     ],
@@ -16,6 +17,7 @@ export default defineConfig({
         text: 'Introduction',
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Sugar Lab (live)', link: '/guide/sugar-lab' },
         ]
       },
       {
