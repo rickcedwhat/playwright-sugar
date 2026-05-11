@@ -7,10 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Docs bundle** — Sugar Lab production assets are emitted under **`/playwright-sugar/lab/`** alongside the docs (GitHub Pages) for deterministic URLs / integration tests — not wired into Markdown previews.
+- **Play explorer** — interactive `create` tour: full-width schematic row, then code + step panel; detect/outcome choices inline (no overlay). Styled TypeScript block (rounded shell, shadows, token colors). Lab retains `gotoDetail=first` and `demoToast=fail-create` for the real SPA / tests.
+
+### Changed
+
+- **Sugar Lab doc page** — Replaced one-off iframe embeds with the Play explorer + collapsible reference excerpts. **`pnpm docs:dev:live`** still runs VitePress + Lab dev servers together.
+
+### Removed
+
+- **`LabEmbed` / scripted walkthrough components** — superseded by **`PlayExplorer`**.
+
 ### Changed (breaking)
 
 - **`attemptAction`** — signature is now positional: `attemptAction(action, outcomes, opts?)`. The previous single-object parameter is removed. Use `async () => {}` as the action when you only need to poll outcomes (or use **`detectPageState`**).
 - **`Play.attempt`** — optional third/fourth argument is now `AttemptActionOptions` (e.g. `{ timeout: 5000 }`) instead of a bare `timeout` number, aligned with `attemptAction`.
+- **`Play.attempt`** — the step callback is consistently named **`action`** in types and docs (replacing earlier **`trigger`** naming). Behavior is unchanged; update only if you referenced the old name in custom tooling or notes.
 
 ## [0.2.0] - 2026-05-08
 

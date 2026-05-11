@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Playwright Sugar",
   description: "Sweet utilities for Playwright automation",
+  /** Keep `lab` script `build:embed` `--base` equal to this value plus `lab/`. */
   base: '/playwright-sugar/',
   themeConfig: {
     logo: '/logo.png',
