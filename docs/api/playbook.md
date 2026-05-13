@@ -49,6 +49,8 @@ Binds **every** playbook in a plain object to the **same** context (same as call
 ```ts
 import { bindPlaybooks, Director } from '@rickcedwhat/playwright-sugar';
 
+const director = new Director();
+
 const catalog = { dataset: datasetPb, logs: logsPb };
 const user = bindPlaybooks({ page: userPage }, catalog);
 const admin = bindPlaybooks({ page: adminPage }, catalog);
@@ -57,7 +59,7 @@ await director.ensureExists(admin.dataset, { name: 'x' });
 await director.assertCan(user.logs, 'access', {});
 ```
 
-`ctx` is a `Partial<PlaybookCtx>`: pass `{ page }` or `{ page, table, ... }` like `.withCtx()`. Return type preserves each playbook’s play typings (`BoundPlaybookCatalog`).
+`ctx` is a `Partial<PlaybookCtx>`: pass `{ page }` or `{ page, table, ... }` like `.withCtx()`. Return type preserves each playbook’s play typings (`BoundPlaybookCatalog`). The snippet assumes `datasetPb`, `logsPb`, `userPage`, and `adminPage` are already in scope (for example from your test or page-object setup).
 
 ## .getPlay(name)
 
