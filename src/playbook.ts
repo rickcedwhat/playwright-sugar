@@ -18,6 +18,38 @@ export type PlaybookCtx = {
   [key: string]: unknown;
 };
 
+/**
+ * Result of {@link bindPlaybooks}: same keys as the input catalog, each playbook
+ * merged with the shared context (preserves per-playbook play typings).
+ */
+export type BoundPlaybookCatalog<T extends Record<string, Playbook>> = {
+  [K in keyof T]: T[K] extends Playbook<infer P> ? Playbook<P> : Playbook;
+};
+
+/**
+ * Binds every playbook in `catalog` to the same context via {@link Playbook.withCtx}.
+ * Typical use: one object for “user” and one for “admin”, without repeating `.withCtx`.
+ *
+ * @example
+ * ```ts
+ * const catalog = { project: projectPb, logs: logsPb };
+ * const user = bindPlaybooks({ page: userPage }, catalog);
+ * const admin = bindPlaybooks({ page: adminPage }, catalog);
+ * await director.ensureExists(admin.project, { name: 'x' });
+ * await director.assertCan(user.logs, 'access', {});
+ * ```
+ */
+export function bindPlaybooks<T extends Record<string, Playbook>>(
+  ctx: Partial<PlaybookCtx>,
+  catalog: T
+): BoundPlaybookCatalog<T> {
+  const out = {} as BoundPlaybookCatalog<T>;
+  for (const key of Object.keys(catalog) as (keyof T & string)[]) {
+    (out as Record<string, Playbook>)[key] = catalog[key]!.withCtx(ctx);
+  }
+  return out;
+}
+
 // ── Playbook ──────────────────────────────────────────────────────────────────
 
 export class Playbook<TPlays extends PlaybookPlays = PlaybookPlays> {

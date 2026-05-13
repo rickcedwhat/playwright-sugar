@@ -42,6 +42,23 @@ Extra keys are available in every act function via `ctx`:
 })
 ```
 
+## `bindPlaybooks(ctx, catalog)`
+
+Binds **every** playbook in a plain object to the **same** context (same as calling `.withCtx(ctx)` on each). Use this when you maintain one catalog of playbooks and two (or more) roles/pages — for example `user` and `admin` — so tests do not repeat `.withCtx({ page: … })` per resource.
+
+```ts
+import { bindPlaybooks, Director } from '@rickcedwhat/playwright-sugar';
+
+const catalog = { dataset: datasetPb, logs: logsPb };
+const user = bindPlaybooks({ page: userPage }, catalog);
+const admin = bindPlaybooks({ page: adminPage }, catalog);
+
+await director.ensureExists(admin.dataset, { name: 'x' });
+await director.assertCan(user.logs, 'access', {});
+```
+
+`ctx` is a `Partial<PlaybookCtx>`: pass `{ page }` or `{ page, table, ... }` like `.withCtx()`. Return type preserves each playbook’s play typings (`BoundPlaybookCatalog`).
+
 ## .getPlay(name)
 
 Returns the play factory for the given name. Throws if the play doesn't exist.
