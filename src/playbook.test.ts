@@ -37,4 +37,21 @@ describe('bindPlaybooks', () => {
     expect(ctx['page']).toBe(page);
     expect(ctx['table']).toEqual(table);
   });
+
+  it('sets log scope without renaming the playbook', () => {
+    const page = makePage('P');
+    const base = new Playbook('ProjectPlaybook', { p: () => new Play() });
+    const bound = bindPlaybooks({ page }, { project: base }, { name: 'User' });
+    expect(bound.project.name).toBe('ProjectPlaybook');
+    expect(bound.project.runLabel('create')).toBe('User > ProjectPlaybook > create');
+  });
+
+  it('does not put playbookLogScope into buildCtx', () => {
+    const page = makePage('P');
+    const base = new Playbook('Z', { p: () => new Play() });
+    const pb = base.withCtx('A', { page });
+    const ctx = pb.buildCtx();
+    expect(ctx['playbookLogScope']).toBeUndefined();
+    expect(pb.runLabel('p')).toBe('A > Z > p');
+  });
 });

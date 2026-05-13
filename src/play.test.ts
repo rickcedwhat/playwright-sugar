@@ -534,6 +534,20 @@ describe('Playbook.withCtx()', () => {
     expect(withPage2.getPage()).toBe(page2);
     expect(withPage1.getPage()).toBe(page1);
   });
+
+  it('two-arg withCtx sets log scope without changing registry name', () => {
+    const pb = new Playbook('MyPb', plays);
+    const page = makePage();
+    const bound = pb.withCtx('User', { page });
+    expect(bound.name).toBe('MyPb');
+    expect(bound.runLabel('exists')).toBe('User > MyPb > exists');
+  });
+
+  it('withCtx(name) without ctx throws', () => {
+    const pb = new Playbook('MyPb', plays);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (pb as any).withCtx('User')).toThrow('ctx is required');
+  });
 });
 
 // ── Extra context propagates to acts ─────────────────────────────────────────
