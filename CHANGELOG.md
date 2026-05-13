@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed (breaking)
 
 - **`Play` / `PlayCtx`** — detect and attempt resolutions are no longer stored on `ctx.state` / `ctx.result` or on `ctx`. Use the **third callback argument** `(page, ctx, outcome)` on every act (`outcome` is `undefined` until after a `.detect()` or `.attempt()`). Shape: `{ name, isSuccess, locator?, payload? }` where `payload` is the winning branch’s `onOutcome` return. **`Play.run()`** returns `{ ctx, lastOutcome? }` so callers (e.g. `Director`) can read the final resolution without mutating context.
-- **`attemptAction` / `detectPageState`** — return value uses **`payload`** (not `data`) and may include **`locator`** when a locator-based outcome wins.
+- **`attemptAction` / `detectPageState`** — return value uses **`payload`** (not `data`) and may include **`locator`** when a locator-based outcome wins. Soft timeout and action-error fallbacks **do not invoke `onOutcome`** (no winning locator; previously `onOutcome` could run with a null locator).
 - **`Director` / `PlayResult`** — `PlayResult.data` is replaced by **`PlayResult.payload`**, aligned with `PlayOutcome.payload`.
 - **`attemptAction`** — signature is now positional: `attemptAction(action, outcomes, opts?)`. The previous single-object parameter is removed. Use `async () => {}` as the action when you only need to poll outcomes (or use **`detectPageState`**).
 - **`Play.attempt`** — optional third/fourth argument is now `AttemptActionOptions` (e.g. `{ timeout: 5000 }`) instead of a bare `timeout` number, aligned with `attemptAction`.

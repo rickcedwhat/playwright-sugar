@@ -111,7 +111,7 @@ Whether expiry throws or returns a named outcome depends on your outcome list: i
 
 ### .cleanup(fn, opts?)
 
-Runs after a successful attempt — typically reverts state so the test is idempotent. Skipped if the attempt was never reached or if a prior step threw.
+Runs after an **attempt** step has finished (success or failure), unless a prior step threw — typically used to revert state or dismiss UI so the test stays idempotent. Skipped if the attempt was never reached or if a prior step threw.
 
 ```ts
 new Play().cleanup(async (page, _ctx, outcome) => {

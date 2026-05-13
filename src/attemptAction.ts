@@ -131,23 +131,17 @@ ${errorMsg}
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  // Timeout Handling
-  const timeoutOutcome = actionError 
-    ? (normalizedOutcomes.find((o) => o.isActionErrorOutcome) || normalizedOutcomes.find((o) => o.isTimeoutOutcome))
+  // Timeout Handling — no visible winner; do not run onOutcome (no winning locator).
+  const timeoutOutcome = actionError
+    ? normalizedOutcomes.find((o) => o.isActionErrorOutcome) ||
+      normalizedOutcomes.find((o) => o.isTimeoutOutcome)
     : normalizedOutcomes.find((o) => o.isTimeoutOutcome);
 
   if (timeoutOutcome) {
-    let payload: unknown | undefined = undefined;
-    if (timeoutOutcome.onOutcome) {
-      payload = await timeoutOutcome.onOutcome(null as any);
-    }
-
-    const resolution: AttemptResolution = {
+    return {
       isSuccess: timeoutOutcome.isSuccess,
       outcome: timeoutOutcome.name,
     };
-    if (payload !== undefined) resolution.payload = payload;
-    return resolution;
   }
 
   const debugList = normalizedOutcomes
