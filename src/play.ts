@@ -1,6 +1,11 @@
-import type { Page } from '@playwright/test';
-import { attemptAction, detectPageState } from './attemptAction.js';
-import type { AttemptActionOptions, Outcome } from './attemptAction.js';
+import type { Locator, Page } from '@playwright/test';
+import {
+  attemptAction,
+  detectPageState,
+  type AttemptActionOptions,
+  type AttemptResolution,
+  type Outcome,
+} from './attemptAction.js';
 import type { OutcomeSpec } from './outcomes.js';
 
 export type { AttemptActionOptions } from './attemptAction.js';
@@ -15,23 +20,53 @@ export type DetectOptions = ActOptions & {
   timeout?: number;
 };
 
+/** One branch returned from the `.detect()` callback — forwarded to `detectPageState` / `attemptAction`. */
+export type DetectCandidate = {
+  name: string;
+  isSuccess: boolean;
+  locator?: Locator;
+  /**
+   * When this branch wins, called with the winning locator; return value becomes the next act’s
+   * third-argument `outcome.payload` (see {@link PlayOutcome}).
+   */
+  onOutcome?: (winner: Locator) => Promise<unknown>;
+};
+
+/**
+ * Resolved winner from the immediately previous `.detect()` or `.attempt()` (third argument to
+ * every act callback). Omitted / `undefined` when the previous act was not detect or attempt.
+ */
+export type PlayOutcome = {
+  name: string;
+  isSuccess: boolean;
+  locator?: Locator;
+  /** From the winning branch’s `onOutcome`, if defined; otherwise `undefined`. */
+  payload?: unknown;
+};
+
+/** Return value of {@link Play.run} — `lastOutcome` is the final detect/attempt resolution, if any. */
+export type PlayRunResult = {
+  ctx: PlayCtx;
+  lastOutcome?: PlayOutcome;
+};
+
+function outcomeFromResolution(res: AttemptResolution): PlayOutcome {
+  const o: PlayOutcome = {
+    name: res.outcome,
+    isSuccess: res.isSuccess,
+  };
+  if (res.payload !== undefined) o.payload = res.payload;
+  if (res.locator != null) o.locator = res.locator;
+  return o;
+}
+
 /** Mutable context object passed to every act function during play execution. */
 export type PlayCtx = {
-  /** Result of the most recent .detect() — winner's name and isSuccess. */
-  state: { name: string; isSuccess: boolean; data?: unknown } | null;
-  /** Result of the most recent .attempt() — set even on failure outcomes. */
-  result: { isSuccess: boolean; outcome: string; data?: unknown } | null;
   /** Arbitrary extra context from Playbook.withCtx() (e.g. table helpers). */
   [key: string]: unknown;
 };
 
-type ActFn = (page: Page, ctx: PlayCtx) => Promise<void>;
-
-type DetectCandidate = {
-  name: string;
-  isSuccess: boolean;
-  locator?: import('@playwright/test').Locator;
-};
+export type ActFn = (page: Page, ctx: PlayCtx, outcome: PlayOutcome | undefined) => Promise<void>;
 
 // ── Internal act record (discriminated union) ─────────────────────────────────
 
@@ -129,7 +164,7 @@ export class Play {
 
   // ── Execution ────────────────────────────────────────────────────────────────
 
-  async run(label: string, ctx: PlayCtx): Promise<PlayCtx> {
+  async run(label: string, ctx: PlayCtx): Promise<PlayRunResult> {
     const page = ctx['page'] as Page;
     if (!page) throw new Error(`[${label}] No page in PlayCtx — bind one via Playbook.withCtx({ page })`);
 
@@ -141,6 +176,7 @@ export class Play {
 
     let attemptReached = false;
     let runError: Error | undefined;
+    let lastOutcome: PlayOutcome | undefined;
 
     for (const act of mainActs) {
       const actName = _actLabel(act);
@@ -155,7 +191,7 @@ export class Play {
       try {
         switch (act.kind) {
           case 'act':
-            await act.fn(page, ctx);
+            await act.fn(page, ctx, lastOutcome);
             console.log(`  ✅ ${actName}  (${Date.now() - t}ms)`);
             break;
 
@@ -170,12 +206,13 @@ export class Play {
               name: c.name,
               isSuccess: c.isSuccess,
               ...(c.locator !== undefined && { locator: c.locator }),
+              ...(c.onOutcome !== undefined && { onOutcome: c.onOutcome }),
             }));
             const detectParams: Parameters<typeof detectPageState>[0] = { outcomes };
             if (act.timeout !== undefined) detectParams.timeout = act.timeout;
             const detectResult = await detectPageState(detectParams);
-            ctx['state'] = { name: detectResult.outcome, isSuccess: detectResult.isSuccess, data: detectResult.data };
-            console.log(`  ✅ ${actName}  (${Date.now() - t}ms) → state: ${detectResult.outcome}`);
+            lastOutcome = outcomeFromResolution(detectResult);
+            console.log(`  ✅ ${actName}  (${Date.now() - t}ms) → outcome: ${lastOutcome.name}`);
             break;
           }
 
@@ -197,12 +234,13 @@ export class Play {
             const attemptOpts: AttemptActionOptions | undefined =
               resolvedTimeout !== undefined ? { ...act.opts, timeout: resolvedTimeout } : act.opts;
 
+            const incoming = lastOutcome;
             const result = await attemptAction(
-              () => act.action(page, ctx),
+              () => act.action(page, ctx, incoming),
               resolvedOutcomes,
               attemptOpts
             );
-            ctx['result'] = result;
+            lastOutcome = outcomeFromResolution(result);
 
             const ms = Date.now() - t;
             if (result.isSuccess) {
@@ -233,7 +271,7 @@ export class Play {
 
         const t = Date.now();
         try {
-          await act.fn(page, ctx);
+          await act.fn(page, ctx, lastOutcome);
           console.log(`  ✅ cleanup  (${Date.now() - t}ms)`);
         } catch (err: unknown) {
           const ms = Date.now() - t;
@@ -250,16 +288,24 @@ export class Play {
     }
 
     if (runError) throw runError;
-    return ctx;
+
+    const result: PlayRunResult = { ctx };
+    if (lastOutcome !== undefined) result.lastOutcome = lastOutcome;
+    return result;
   }
 }
 
 function _actLabel(act: ActRecord): string {
   switch (act.kind) {
-    case 'act': return act.name;
-    case 'detect': return 'detect';
-    case 'attempt': return act.name;
-    case 'cleanup': return 'cleanup';
-    case 'reload': return 'reload';
+    case 'act':
+      return act.name;
+    case 'detect':
+      return 'detect';
+    case 'attempt':
+      return act.name;
+    case 'cleanup':
+      return 'cleanup';
+    case 'reload':
+      return 'reload';
   }
 }

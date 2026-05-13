@@ -52,4 +52,4 @@ Returns the bound page. Throws if `.withCtx({ page })` has not been called.
 
 ## .buildCtx()
 
-Returns an initial `PlayCtx` from the bound context with `state` and `result` initialised to `null`. Called internally by `Director`.
+Returns an initial `PlayCtx` from the bound context. Called internally by `Director`.

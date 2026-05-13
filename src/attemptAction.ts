@@ -9,6 +9,14 @@ export type Outcome = {
   onOutcome?: (winner: Locator) => Promise<unknown>;
 };
 
+/** Resolution from {@link attemptAction} / {@link detectPageState} — maps to {@link PlayOutcome}. */
+export type AttemptResolution = {
+  isSuccess: boolean;
+  outcome: string;
+  payload?: unknown;
+  locator?: Locator;
+};
+
 /** Options for `attemptAction` / `Play.attempt` — extend with future flags without breaking the positional API. */
 export type AttemptActionOptions = {
   timeout?: number;
@@ -18,7 +26,7 @@ export async function attemptAction(
   action: () => Promise<void>,
   outcomes: Outcome[],
   opts?: AttemptActionOptions
-): Promise<{ isSuccess: boolean; outcome: string; data?: unknown }> {
+): Promise<AttemptResolution> {
   const normalizedOutcomes = outcomes;
   const timeout = opts?.timeout ?? 30000;
 
@@ -106,35 +114,33 @@ ${errorMsg}
         const winner = realWinners[0];
         if (!winner) throw new Error('Winner vanished during processing');
         
-        let data = undefined;
+        let payload: unknown | undefined = undefined;
         if (winner.outcome.onOutcome && winner.locator) {
-          data = await winner.outcome.onOutcome(winner.locator);
+          payload = await winner.outcome.onOutcome(winner.locator);
         }
-        return {
+        const resolution: AttemptResolution = {
           isSuccess: winner.outcome.isSuccess,
           outcome: winner.outcome.name,
-          data,
         };
+        if (payload !== undefined) resolution.payload = payload;
+        if (winner.locator != null) resolution.locator = winner.locator;
+        return resolution;
       }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  // Timeout Handling
-  const timeoutOutcome = actionError 
-    ? (normalizedOutcomes.find((o) => o.isActionErrorOutcome) || normalizedOutcomes.find((o) => o.isTimeoutOutcome))
+  // Timeout Handling — no visible winner; do not run onOutcome (no winning locator).
+  const timeoutOutcome = actionError
+    ? normalizedOutcomes.find((o) => o.isActionErrorOutcome) ||
+      normalizedOutcomes.find((o) => o.isTimeoutOutcome)
     : normalizedOutcomes.find((o) => o.isTimeoutOutcome);
 
   if (timeoutOutcome) {
-    const data = timeoutOutcome.onOutcome
-      ? await timeoutOutcome.onOutcome(null as any)
-      : undefined;
-      
     return {
       isSuccess: timeoutOutcome.isSuccess,
       outcome: timeoutOutcome.name,
-      data,
     };
   }
 

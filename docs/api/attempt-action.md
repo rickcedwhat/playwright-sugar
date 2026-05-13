@@ -5,13 +5,13 @@ Runs a **required** action, then waits for one of several named outcomes to appe
 ## Signature
 
 ```ts
-import type { AttemptActionOptions } from '@rickcedwhat/playwright-sugar';
+import type { AttemptActionOptions, AttemptResolution } from '@rickcedwhat/playwright-sugar';
 
 attemptAction(
   action: () => Promise<void>,
   outcomes: Outcome[],
   opts?: AttemptActionOptions
-): Promise<{ isSuccess: boolean; outcome: string; data?: unknown }>
+): Promise<AttemptResolution>
 ```
 
 `AttemptActionOptions` is an object so you can add future fields (poll tuning, debug flags) without changing the positional shape.
@@ -20,13 +20,16 @@ attemptAction(
 |-------|------|-------------|
 | `timeout` | `number` | Polling budget in ms. Default **30000**. Does not replace soft timeout outcomes — see below. |
 
-## Return value
+## Return value (`AttemptResolution`)
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `isSuccess` | `boolean` | `true` if the winning outcome was created with `Outcomes.success`. |
 | `outcome` | `string` | The name of the winning outcome. |
-| `data` | `unknown` | Optional data returned by the outcome's `onOutcome` callback. |
+| `payload` | `unknown` | Present only when the winning branch’s `onOutcome` returned a defined value. |
+| `locator?` | `Locator` | Present only when a **locator-based** outcome won (omitted on soft timeout / action-error paths). |
+
+`onOutcome` runs only when an outcome becomes the visible winner with a real `Locator`. **Soft timeout** and **action-error** resolutions do not call `onOutcome` — there is no winning element.
 
 ## Examples
 
