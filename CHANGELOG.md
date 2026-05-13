@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`bindPlaybooks(ctx, catalog)`** and **`BoundPlaybookCatalog<T>`** — bind a record of playbooks to one context in a single call (for example user vs admin pages without repeating `.withCtx` per playbook).
+- **`bindPlaybooks(ctx, catalog, opts?)`** — optional `{ name }` calls two-argument `withCtx(name, ctx)` per entry for readable multi-page logs.
+- **`Playbook.withCtx(name, ctx)` overload**, **`logScope()`**, **`runLabel(playName)`** — log prefix separate from registry `Playbook.name`; `Director` / `Play` labels use `scope > PlaybookName > playName`.
+- **Package entry** — explicit `bindPlaybooks` / `BoundPlaybookCatalog` / `BindPlaybooksOptions` re-exports from the root module.
 
 ### Changed (breaking)
 

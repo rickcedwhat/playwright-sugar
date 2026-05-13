@@ -166,7 +166,7 @@ export class Play {
 
   async run(label: string, ctx: PlayCtx): Promise<PlayRunResult> {
     const page = ctx['page'] as Page;
-    if (!page) throw new Error(`[${label}] No page in PlayCtx — bind one via Playbook.withCtx({ page })`);
+    if (!page) throw new Error(`[${label}] No page in PlayCtx — bind one via Playbook.withCtx({ page }) or .withCtx(name, { page })`);
 
     const mainActs = this._acts.filter(a => a.kind !== 'cleanup');
     const cleanupActs = this._acts.filter(a => a.kind === 'cleanup');

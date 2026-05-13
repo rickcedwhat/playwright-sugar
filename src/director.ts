@@ -30,7 +30,7 @@ export class Director {
     const result = await this._runPlay(playbook, playName, params);
     if (!result.isSuccess) {
       throw new Error(
-        `[${playbook.name} > ${playName}] assertCan: expected success but got "${result.outcome}"`
+        `[${playbook.runLabel(playName)}] assertCan: expected success but got "${result.outcome}"`
       );
     }
     return result;
@@ -48,7 +48,7 @@ export class Director {
     const result = await this._runPlay(playbook, playName, params);
     if (result.isSuccess) {
       throw new Error(
-        `[${playbook.name} > ${playName}] assertCannot: expected failure but got success`
+        `[${playbook.runLabel(playName)}] assertCannot: expected failure but got success`
       );
     }
     return result;
@@ -85,8 +85,12 @@ export class Director {
       const strategy = opts.syncStrategy ?? SyncStrategy.default();
       await strategy.sync(opts.syncTo);
 
-      const targetPlaybook = playbook.withCtx({ page: opts.syncTo });
-      await this._retryExists(targetPlaybook, params, playbook.name);
+      const scope = playbook.logScope();
+      const targetPlaybook =
+        scope !== undefined
+          ? playbook.withCtx(scope, { page: opts.syncTo })
+          : playbook.withCtx({ page: opts.syncTo });
+      await this._retryExists(targetPlaybook, params, targetPlaybook.runLabel('exists'));
     }
   }
 
@@ -100,7 +104,7 @@ export class Director {
     const factory = playbook.getPlay(playName);
     const play = factory(params);
     const ctx = playbook.buildCtx();
-    const label = `${playbook.name} > ${playName}`;
+    const label = playbook.runLabel(playName);
 
     const { lastOutcome } = await play.run(label, ctx);
 
@@ -119,7 +123,7 @@ export class Director {
   private async _retryExists(
     playbook: Playbook,
     params: unknown,
-    originalName: string
+    existsLabel: string
   ): Promise<void> {
     const deadline = Date.now() + SYNC_RETRY_TIMEOUT;
     while (Date.now() < deadline) {
@@ -128,7 +132,7 @@ export class Director {
       await new Promise(resolve => setTimeout(resolve, SYNC_RETRY_INTERVAL));
     }
     throw new Error(
-      `[${originalName}] ensureExists: resource not found on sync target after ${SYNC_RETRY_TIMEOUT}ms`
+      `[${existsLabel}] ensureExists: resource not found on sync target after ${SYNC_RETRY_TIMEOUT}ms`
     );
   }
 }
