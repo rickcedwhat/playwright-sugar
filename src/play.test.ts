@@ -41,13 +41,13 @@ const mockLocator = {} as any;
 describe('Play.run() always calls bringToFront', () => {
   it('calls page.bringToFront() before the first act', async () => {
     const page = makePage();
-    await new Play().act('nav', async () => {}).run('label', { page, state: null, result: null });
+    await new Play().act('nav', async () => {}).run('label', { page });
     expect(page.bringToFront).toHaveBeenCalledOnce();
   });
 
   it('calls bringToFront even when all acts are skipped', async () => {
     const page = makePage();
-    await new Play().act('nav', async () => {}, { skip: true }).run('label', { page, state: null, result: null });
+    await new Play().act('nav', async () => {}, { skip: true }).run('label', { page });
     expect(page.bringToFront).toHaveBeenCalledOnce();
   });
 });
@@ -64,7 +64,7 @@ describe('Play chain order', () => {
       .act('second', async () => { order.push(2); })
       .act('third', async () => { order.push(3); });
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(order).toEqual([1, 2, 3]);
   });
@@ -73,14 +73,14 @@ describe('Play chain order', () => {
     const names: string[] = [];
     const page = makePage();
 
-    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', data: undefined });
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', payload: undefined });
 
     const play = new Play()
       .nav(async () => { names.push('nav'); })
       .prep(async () => { names.push('prep'); })
       .attempt(async () => {}, [Outcomes.success(mockLocator)]);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(names).toEqual(['nav', 'prep']);
   });
@@ -95,7 +95,7 @@ describe('ActOptions.skip', () => {
 
     const play = new Play().act('skipped', fn, { skip: true });
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(fn).not.toHaveBeenCalled();
   });
@@ -108,7 +108,7 @@ describe('ActOptions.skip', () => {
       .act('skipped', vi.fn(), { skip: true })
       .act('runs', fn);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(fn).toHaveBeenCalledOnce();
   });
@@ -118,7 +118,7 @@ describe('ActOptions.skip', () => {
 
     const play = new Play().reload({ waitUntil: 'domcontentloaded' }, { skip: true });
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(page.reload).not.toHaveBeenCalled();
   });
@@ -131,7 +131,7 @@ describe('.reload()', () => {
     const page = makePage();
     const play = new Play().reload({ waitUntil: 'domcontentloaded', timeout: 5000 });
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(page.reload).toHaveBeenCalledWith({ waitUntil: 'domcontentloaded', timeout: 5000 });
   });
@@ -140,42 +140,76 @@ describe('.reload()', () => {
     const page = makePage();
     const play = new Play().reload();
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(page.reload).toHaveBeenCalledWith(undefined);
   });
 });
 
-// ── .detect() → ctx.state ────────────────────────────────────────────────────
+// ── .detect() — run().lastOutcome + third arg ─────────────────────────────────
 
-describe('.detect() ctx.state', () => {
+describe('.detect() run result and third arg', () => {
   beforeEach(() => {
-    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'found', data: undefined });
+    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'found', payload: undefined });
   });
 
-  it('sets ctx.state with the name and isSuccess from the winning outcome', async () => {
+  it('play.run returns lastOutcome from detect', async () => {
     const page = makePage();
 
     const play = new Play().detect(() => [
       { name: 'found', isSuccess: true, locator: mockLocator },
     ]);
 
-    const ctx = await play.run('label', { page, state: null, result: null });
+    const { lastOutcome } = await play.run('label', { page });
 
-    expect(ctx['state']).toEqual({ name: 'found', isSuccess: true, data: undefined });
+    expect(lastOutcome).toMatchObject({ name: 'found', isSuccess: true });
   });
 
-  it('ctx.state is available in acts that follow detect', async () => {
+  it('forwards optional onOutcome on detect candidates to detectPageState outcomes', async () => {
     const page = makePage();
-    let seenState: unknown = undefined;
+    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'a', payload: { picked: true } });
 
+    const onOutcome = vi.fn().mockResolvedValue({ picked: true });
+    const play = new Play().detect(() => [
+      { name: 'a', isSuccess: true, locator: mockLocator, onOutcome },
+    ]);
+
+    await play.run('label', { page });
+
+    expect(mockDetectPageState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcomes: [
+          expect.objectContaining({
+            name: 'a',
+            isSuccess: true,
+            locator: mockLocator,
+            onOutcome,
+          }),
+        ],
+      })
+    );
+  });
+
+  it('passes undefined as third arg to acts before any detect/attempt', async () => {
+    const page = makePage();
+    let arg: unknown = 'unset';
+    const play = new Play().act('first', async (_p, _c, outcome) => { arg = outcome; });
+
+    await play.run('label', { page });
+
+    expect(arg).toBeUndefined();
+  });
+
+  it('passes detect outcome as third arg to the following act', async () => {
+    const page = makePage();
+    let arg: unknown;
     const play = new Play()
       .detect(() => [{ name: 'found', isSuccess: true, locator: mockLocator }])
-      .act('read-state', async (_p, ctx) => { seenState = ctx['state']; });
+      .act('after', async (_p, _c, outcome) => { arg = outcome; });
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
-    expect(seenState).toMatchObject({ name: 'found', isSuccess: true });
+    expect(arg).toMatchObject({ name: 'found', isSuccess: true });
   });
 });
 
@@ -190,7 +224,7 @@ describe('.attempt() and .cleanup()', () => {
       .act('only-act', async () => {})
       .cleanup(cleanupFn);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(cleanupFn).not.toHaveBeenCalled();
   });
@@ -198,13 +232,13 @@ describe('.attempt() and .cleanup()', () => {
   it('cleanup runs when attempt was reached (success outcome)', async () => {
     const cleanupFn = vi.fn().mockResolvedValue(undefined);
     const page = makePage();
-    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', data: undefined });
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', payload: undefined });
 
     const play = new Play()
       .attempt(async () => {}, [Outcomes.success(mockLocator)])
       .cleanup(cleanupFn);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(cleanupFn).toHaveBeenCalledOnce();
   });
@@ -212,41 +246,68 @@ describe('.attempt() and .cleanup()', () => {
   it('cleanup runs when attempt was reached (failure outcome)', async () => {
     const cleanupFn = vi.fn().mockResolvedValue(undefined);
     const page = makePage();
-    mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'fail', data: undefined });
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'fail', payload: undefined });
 
     const play = new Play()
       .attempt(async () => {}, [Outcomes.failure(mockLocator)])
       .cleanup(cleanupFn);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(cleanupFn).toHaveBeenCalledOnce();
   });
 
-  it('cleanup receives ctx.result from the attempt', async () => {
+  it('cleanup receives attempt outcome as third argument', async () => {
     const page = makePage();
-    let seenResult: unknown;
-    mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'blocked', data: undefined });
+    let seenArg: unknown;
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'blocked', payload: undefined });
 
     const play = new Play()
       .attempt(async () => {}, [Outcomes.failure(mockLocator)])
-      .cleanup(async (_p, ctx) => { seenResult = ctx['result']; });
+      .cleanup(async (_p, _c, outcome) => {
+        seenArg = outcome;
+      });
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
-    expect(seenResult).toMatchObject({ isSuccess: false, outcome: 'blocked' });
+    expect(seenArg).toMatchObject({ isSuccess: false, name: 'blocked' });
   });
 
-  it('sets ctx.result with the attempt outcome', async () => {
+  it('attempt trigger receives prior detect outcome as third argument', async () => {
     const page = makePage();
-    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'created', data: 42 });
+    mockDetectPageState.mockResolvedValueOnce({
+      isSuccess: true,
+      outcome: 'empty',
+      payload: 7,
+      locator: mockLocator,
+    });
+    let received: unknown;
+    mockAttemptAction.mockImplementationOnce(async (trigger: () => Promise<void>) => {
+      await trigger();
+      return { isSuccess: true, outcome: 'done', payload: undefined };
+    });
+
+    const play = new Play()
+      .detect(() => [{ name: 'empty', isSuccess: true, locator: mockLocator }])
+      .attempt('step', async (_p, _c, o) => {
+        received = o;
+      }, [Outcomes.success(mockLocator)]);
+
+    await play.run('label', { page });
+
+    expect(received).toMatchObject({ name: 'empty', isSuccess: true, payload: 7 });
+  });
+
+  it('play.run returns lastOutcome after attempt from attemptAction resolution', async () => {
+    const page = makePage();
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'created', payload: 42 });
 
     const play = new Play()
       .attempt(async () => {}, [Outcomes.success(mockLocator)]);
 
-    const ctx = await play.run('label', { page, state: null, result: null });
+    const { lastOutcome } = await play.run('label', { page });
 
-    expect(ctx['result']).toEqual({ isSuccess: true, outcome: 'created', data: 42 });
+    expect(lastOutcome).toMatchObject({ name: 'created', isSuccess: true, payload: 42 });
   });
 });
 
@@ -259,7 +320,7 @@ describe('error labels', () => {
 
     const play = new Play().act('prep', async () => { throw cause; });
 
-    await expect(play.run('MyPb > update', { page, state: null, result: null }))
+    await expect(play.run('MyPb > update', { page }))
       .rejects.toThrow('[MyPb > update > prep] row not found');
   });
 
@@ -271,7 +332,7 @@ describe('error labels', () => {
 
     let thrown: Error | undefined;
     try {
-      await play.run('label', { page, state: null, result: null });
+      await play.run('label', { page });
     } catch (e) {
       thrown = e as Error;
     }
@@ -285,7 +346,7 @@ describe('error labels', () => {
 
     const play = new Play().attempt('submit', async () => {}, [Outcomes.success(mockLocator)]);
 
-    await expect(play.run('Pb > play', { page, state: null, result: null }))
+    await expect(play.run('Pb > play', { page }))
       .rejects.toThrow('[Pb > play > submit]');
   });
 });
@@ -301,14 +362,14 @@ describe('.attempt() locator resolution', () => {
     let capturedOutcomes: unknown;
     mockAttemptAction.mockImplementationOnce(async (_a, outcomes) => {
       capturedOutcomes = outcomes;
-      return { isSuccess: true, outcome: 'success', data: undefined };
+      return { isSuccess: true, outcome: 'success', payload: undefined };
     });
 
     const play = new Play().attempt(async () => {}, [
       Outcomes.success(p => p.getByText('This dataset is empty')),
     ]);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     const outcome = (capturedOutcomes as any[])[0];
     expect(outcome.locator).toBe(resolvedLocator);
@@ -320,14 +381,14 @@ describe('.attempt() locator resolution', () => {
     (page.getByText as unknown as MockInstance).mockReturnValue({});
     let capturedCtx: unknown;
     mockAttemptAction.mockImplementationOnce(async () =>
-      ({ isSuccess: true, outcome: 'success', data: undefined })
+      ({ isSuccess: true, outcome: 'success', payload: undefined })
     );
 
     const play = new Play().attempt(async () => {}, [
       Outcomes.success((_p, ctx) => { capturedCtx = ctx; return _p.getByText('test'); }),
     ]);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(capturedCtx).toBeDefined();
     expect(typeof capturedCtx).toBe('object');
@@ -338,7 +399,7 @@ describe('.attempt() locator resolution', () => {
     let capturedTimeout: unknown;
     mockAttemptAction.mockImplementationOnce(async (_a, _o, opts) => {
       capturedTimeout = opts?.timeout;
-      return { isSuccess: true, outcome: 'ok', data: undefined };
+      return { isSuccess: true, outcome: 'ok', payload: undefined };
     });
 
     const play = new Play().attempt(async () => {}, [
@@ -346,7 +407,7 @@ describe('.attempt() locator resolution', () => {
       Outcomes.timeout(8000),
     ]);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(capturedTimeout).toBe(8000);
   });
@@ -356,7 +417,7 @@ describe('.attempt() locator resolution', () => {
     let capturedTimeout: unknown;
     mockAttemptAction.mockImplementationOnce(async (_a, _o, opts) => {
       capturedTimeout = opts?.timeout;
-      return { isSuccess: true, outcome: 'ok', data: undefined };
+      return { isSuccess: true, outcome: 'ok', payload: undefined };
     });
 
     const play = new Play().attempt(
@@ -365,7 +426,7 @@ describe('.attempt() locator resolution', () => {
       { timeout: 12_000 }
     );
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(capturedTimeout).toBe(12_000);
   });
@@ -375,7 +436,7 @@ describe('.attempt() locator resolution', () => {
     let capturedTimeout: unknown;
     mockAttemptAction.mockImplementationOnce(async (_a, _o, opts) => {
       capturedTimeout = opts?.timeout;
-      return { isSuccess: true, outcome: 'ok', data: undefined };
+      return { isSuccess: true, outcome: 'ok', payload: undefined };
     });
 
     const play = new Play().attempt(
@@ -385,7 +446,7 @@ describe('.attempt() locator resolution', () => {
       { timeout: 7000 }
     );
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(capturedTimeout).toBe(7000);
   });
@@ -509,19 +570,19 @@ describe('Play logging', () => {
 
   it('logs ▶ Play: label at the start', async () => {
     const page = makePage();
-    await new Play().run('MyPb > exists', { page, state: null, result: null });
+    await new Play().run('MyPb > exists', { page });
     expect(logSpy).toHaveBeenCalledWith('▶ Play: MyPb > exists');
   });
 
   it('logs ✅ for a successful act', async () => {
     const page = makePage();
-    await new Play().act('nav', async () => {}).run('label', { page, state: null, result: null });
+    await new Play().act('nav', async () => {}).run('label', { page });
     expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/✅ nav\s+\(\d+ms\)/));
   });
 
   it('logs ⏭ for a skipped act', async () => {
     const page = makePage();
-    await new Play().act('prep', async () => {}, { skip: true }).run('label', { page, state: null, result: null });
+    await new Play().act('prep', async () => {}, { skip: true }).run('label', { page });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('⏭  prep  SKIPPED'));
   });
 
@@ -531,7 +592,7 @@ describe('Play logging', () => {
       .act('nav', async () => { throw new Error('boom'); })
       .act('prep', async () => {});
 
-    await expect(play.run('label', { page, state: null, result: null })).rejects.toThrow();
+    await expect(play.run('label', { page })).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/❌ nav/));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('⏭  prep  SKIPPED'));
@@ -539,23 +600,23 @@ describe('Play logging', () => {
 
   it('logs ❌ for a failure outcome from attempt', async () => {
     const page = makePage();
-    mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'blocked', data: undefined });
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'blocked', payload: undefined });
 
     const play = new Play().attempt(async () => {}, [Outcomes.failure(mockLocator)]);
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/❌ attempt.*outcome: blocked/));
   });
 
-  it('logs → state: <name> after detect', async () => {
+  it('logs → outcome: <name> after detect', async () => {
     const page = makePage();
-    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'found', data: undefined });
+    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'found', payload: undefined });
 
     const play = new Play().detect(() => [{ name: 'found', isSuccess: true, locator: mockLocator }]);
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('→ state: found'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('→ outcome: found'));
   });
 
   it('logs ⏭ cleanup SKIPPED when attempt was not reached', async () => {
@@ -564,7 +625,7 @@ describe('Play logging', () => {
       .act('nav', async () => {})
       .cleanup(async () => {});
 
-    await play.run('label', { page, state: null, result: null });
+    await play.run('label', { page });
 
     const calls = logSpy.mock.calls.map(c => c[0] as string);
     expect(calls.some(c => c.includes('cleanup'))).toBe(false);
@@ -572,14 +633,14 @@ describe('Play logging', () => {
 
   it('logs ⏭ cleanup SKIPPED when a prior act threw', async () => {
     const page = makePage();
-    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', data: undefined });
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'ok', payload: undefined });
 
     const play = new Play()
       .attempt(async () => {}, [Outcomes.success(mockLocator)])
       .act('post', async () => { throw new Error('after attempt'); })
       .cleanup(async () => {});
 
-    await expect(play.run('label', { page, state: null, result: null })).rejects.toThrow();
+    await expect(play.run('label', { page })).rejects.toThrow();
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('⏭  cleanup  SKIPPED'));
   });

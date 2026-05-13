@@ -10,7 +10,8 @@ export type EnsureExistsOptions = {
 export type PlayResult = {
   isSuccess: boolean;
   outcome: string;
-  data?: unknown;
+  /** From the winning detect/attempt branch’s `onOutcome`, if any. */
+  payload?: unknown;
 };
 
 const SYNC_RETRY_TIMEOUT = 30_000;
@@ -19,7 +20,7 @@ const SYNC_RETRY_INTERVAL = 500;
 export class Director {
   /**
    * Runs a play and asserts that it resulted in a **success** outcome.
-   * Throws if the play produced no attempt result or a failure outcome.
+   * Throws if the play produced no detect/attempt outcome or a failure outcome.
    */
   async assertCan(
     playbook: Playbook,
@@ -51,6 +52,14 @@ export class Director {
       );
     }
     return result;
+  }
+
+  /**
+   * Runs a play and returns the outcome without asserting.
+   * Use with `assertCan` / `assertCannot` when you need to aggregate results (e.g. permission matrices).
+   */
+  async run(playbook: Playbook, playName: string, params: unknown): Promise<PlayResult> {
+    return this._runPlay(playbook, playName, params);
   }
 
   /**
@@ -93,16 +102,15 @@ export class Director {
     const ctx = playbook.buildCtx();
     const label = `${playbook.name} > ${playName}`;
 
-    const finalCtx = await play.run(label, ctx);
+    const { lastOutcome } = await play.run(label, ctx);
 
-    if (finalCtx['result']) {
-      return finalCtx['result'] as PlayResult;
-    }
-
-    // exists-style plays use .detect() with no .attempt() — promote state to result
-    if (finalCtx['state']) {
-      const s = finalCtx['state'] as { name: string; isSuccess: boolean; data?: unknown };
-      return { isSuccess: s.isSuccess, outcome: s.name, data: s.data };
+    if (lastOutcome) {
+      const r: PlayResult = {
+        isSuccess: lastOutcome.isSuccess,
+        outcome: lastOutcome.name,
+      };
+      if (lastOutcome.payload !== undefined) r.payload = lastOutcome.payload;
+      return r;
     }
 
     return { isSuccess: false, outcome: 'no-attempt' };

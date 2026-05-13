@@ -36,7 +36,7 @@ new Play().reload({ waitUntil: 'domcontentloaded' }, { skip: !withReload })
 
 ### .detect(fn, opts?)
 
-Waits for one of several locators to appear and records the winner in `ctx.state`. Used for branching (e.g. determine whether a table is empty or populated).
+Waits for one of several locators to appear and passes the winner as the **third argument** to every following act. Used for branching (e.g. determine whether a table is empty or populated). The same resolution is also exposed on **`Play.run()`’s return value** as `lastOutcome` (see below).
 
 ```ts
 new Play().detect(page => [
@@ -45,7 +45,7 @@ new Play().detect(page => [
 ], { timeout: 8000 })
 ```
 
-`ctx.state` is set to `{ name, isSuccess, data }` after detect runs.
+After detect runs, the next act’s third argument `outcome` is `{ name, isSuccess, locator?, payload? }`. `payload` comes from the winning branch’s `onOutcome`, if any. Nothing is written onto `ctx` for this — use `outcome` or the `lastOutcome` field from `.run()`’s result.
 
 ### .attempt(action, outcomes, opts?)  /  .attempt(name, action, outcomes, opts?)
 
@@ -55,8 +55,8 @@ Performs an action and waits for an outcome. The optional third/fourth argument 
 
 ```ts
 new Play().attempt(
-  async (page, ctx) => {
-    const btn = ctx['state']?.name === 'empty' ? 'Empty item' : 'Item';
+  async (page, _ctx, outcome) => {
+    const btn = outcome?.name === 'empty' ? 'Empty item' : 'Item';
     await page.getByRole('button', { name: btn }).click();
     await page.getByPlaceholder('Name').fill('My Item');
     await page.getByRole('button', { name: 'Create' }).click();
@@ -95,7 +95,7 @@ new Play().attempt(
 )
 ```
 
-`ctx.result` is set to `{ isSuccess, outcome, data }` after the attempt.
+After the attempt, the next act’s third argument `outcome` is the attempt resolution (`name` is the winning outcome’s name, `payload` from `onOutcome` if present). It is `undefined` before the first `.detect()` or `.attempt()`.
 
 #### Timeout semantics
 
@@ -103,7 +103,7 @@ Timeouts are resolved in this order:
 
 1. **`opts.timeout`**: passed through to `attemptAction` as the polling budget. If no locator outcome wins before this limit **and** there is **no** `Outcomes.timeout()` outcome in the list, `attemptAction` throws (hard timeout).
 
-2. **`Outcomes.timeout(after)`** (soft timeout outcome): supplies an `after` value used as the polling budget **when** `opts.timeout` is not set. If the timer expires without another locator winning, the winner is the timeout **outcome** — resolution completes normally and `ctx.result` reflects that outcome (typically `isSuccess: false`), rather than throwing.
+2. **`Outcomes.timeout(after)`** (soft timeout outcome): supplies an `after` value used as the polling budget **when** `opts.timeout` is not set. If the timer expires without another locator winning, the winner is the timeout **outcome** — resolution completes normally and the next act’s `outcome` argument (and `run()`’s `lastOutcome`) reflect that result (typically `isSuccess: false`), rather than throwing.
 
 3. **Default** (30 seconds): used when neither `opts.timeout` nor a timeout outcome with an `after` value applies.
 
@@ -114,8 +114,8 @@ Whether expiry throws or returns a named outcome depends on your outcome list: i
 Runs after a successful attempt — typically reverts state so the test is idempotent. Skipped if the attempt was never reached or if a prior step threw.
 
 ```ts
-new Play().cleanup(async (page, ctx) => {
-  if ((ctx.result as any)?.isSuccess) {
+new Play().cleanup(async (page, _ctx, outcome) => {
+  if (outcome?.isSuccess) {
     // revert the change
   } else {
     await page.keyboard.press('Escape');
@@ -128,18 +128,33 @@ new Play().cleanup(async (page, ctx) => {
 ### .run(label, ctx)
 
 ```ts
-play.run(label: string, ctx: PlayCtx): Promise<PlayCtx>
+play.run(label: string, ctx: PlayCtx): Promise<PlayRunResult>
+
+type PlayRunResult = {
+  ctx: PlayCtx;
+  /** Final `.detect()` / `.attempt()` resolution in this run, if any. */
+  lastOutcome?: PlayOutcome;
+}
 ```
 
-Executes all steps in order. Calls `page.bringToFront()` automatically. Logs each step with ✅ / ❌ / ⏭ and timing. Normally called by `Director` rather than directly.
+Executes all steps in order. Calls `page.bringToFront()` automatically. Logs each step with ✅ / ❌ / ⏭ and timing. Normally called by `Director` rather than directly. **`ctx` is not mutated with detect/attempt results** — read `lastOutcome` from the return value, or use the **third callback argument** inside each step.
 
 ## Step context (PlayCtx)
 
 ```ts
+import type { Locator } from '@playwright/test';
+
+type PlayOutcome = {
+  name: string;
+  isSuccess: boolean;
+  locator?: Locator;
+  payload?: unknown;
+};
+
 type PlayCtx = {
   page: Page;
-  state: { name: string; isSuccess: boolean; data?: unknown } | null;
-  result: { isSuccess: boolean; outcome: string; data?: unknown } | null;
   [key: string]: unknown; // extra keys from Playbook.withCtx()
 }
 ```
+
+Every act callback has the shape `(page, ctx, outcome)` where `outcome` is `undefined` until a prior step was `.detect()` or `.attempt()`.

@@ -28,9 +28,9 @@ const datasetPb = new Playbook('DatasetPlaybook', {
       { name: 'table', isSuccess: true, locator: page.locator('[data-component="TableHeadersComponent"]') },
     ], { timeout: 8000 })
     .attempt(
-      async (page, ctx) => {
-        const state = ctx['state'] as { name: string } | null;
-        const btnName = state?.name === 'empty' ? 'Empty dataset' : 'Dataset';
+      async (page, _ctx, outcome) => {
+        const branch = outcome?.name;
+        const btnName = branch === 'empty' ? 'Empty dataset' : 'Dataset';
         await page.getByRole('button', { name: btnName, exact: true }).click();
         await page.getByPlaceholder('Name').fill(name, { timeout: 3000 });
         await page.getByRole('button', { name: 'Create' }).click();
@@ -60,9 +60,8 @@ const datasetPb = new Playbook('DatasetPlaybook', {
         Outcomes.timeout(5000),
       ],
     )
-    .cleanup(async (page, ctx) => {
-      const result = ctx['result'] as { isSuccess: boolean } | null;
-      if (result?.isSuccess) {
+    .cleanup(async (page, _ctx, outcome) => {
+      if (outcome?.isSuccess) {
         await page.locator(`tr:has-text("${newName}")`).getByRole('button', { name: 'Row actions' }).click();
         await page.getByRole('menuitem', { name: 'Rename' }).click();
         await page.getByRole('textbox').fill(name);

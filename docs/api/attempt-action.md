@@ -5,13 +5,14 @@ Runs a **required** action, then waits for one of several named outcomes to appe
 ## Signature
 
 ```ts
+import type { Locator } from '@playwright/test';
 import type { AttemptActionOptions } from '@rickcedwhat/playwright-sugar';
 
 attemptAction(
   action: () => Promise<void>,
   outcomes: Outcome[],
   opts?: AttemptActionOptions
-): Promise<{ isSuccess: boolean; outcome: string; data?: unknown }>
+): Promise<{ isSuccess: boolean; outcome: string; payload?: unknown; locator?: Locator }>
 ```
 
 `AttemptActionOptions` is an object so you can add future fields (poll tuning, debug flags) without changing the positional shape.
@@ -26,7 +27,8 @@ attemptAction(
 |-------|------|-------------|
 | `isSuccess` | `boolean` | `true` if the winning outcome was created with `Outcomes.success`. |
 | `outcome` | `string` | The name of the winning outcome. |
-| `data` | `unknown` | Optional data returned by the outcome's `onOutcome` callback. |
+| `payload` | `unknown` | Optional value returned by the outcome's `onOutcome` callback. |
+| `locator` | `Locator` | Present when a locator-based outcome won (not on all timeout paths). |
 
 ## Examples
 

@@ -70,6 +70,6 @@ await director.ensureExists(adminPb, { name: 'Shared Dataset' }, {
 type PlayResult = {
   isSuccess: boolean;
   outcome: string;
-  data?: unknown;
+  payload?: unknown;
 }
 ```
