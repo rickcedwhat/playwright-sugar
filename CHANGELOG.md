@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`bindPlaybooks(ctx, catalog)`** and **`BoundPlaybookCatalog<T>`** — bind a record of playbooks to one context in a single call (for example user vs admin pages without repeating `.withCtx` per playbook).
+
 ### Changed (breaking)
 
 - **`Play` / `PlayCtx`** — detect and attempt resolutions are no longer stored on `ctx.state` / `ctx.result` or on `ctx`. Use the **third callback argument** `(page, ctx, outcome)` on every act (`outcome` is `undefined` until after a `.detect()` or `.attempt()`). Shape: `{ name, isSuccess, locator?, payload? }` where `payload` is the winning branch’s `onOutcome` return. **`Play.run()`** returns `{ ctx, lastOutcome? }` so callers (e.g. `Director`) can read the final resolution without mutating context.
