@@ -65,7 +65,7 @@ test.describe('Playwright Simple POC', () => {
     const anchor = page.getByText('User #2');
     const target = page.locator('input.status');
 
-    await relator(anchor, target, 'div.row').fill('Active');
+    await relator(anchor, target, page.locator('div.row')).fill('Active');
 
     const val1 = await page.locator('#row1 input.status').inputValue();
     const val2 = await page.locator('#row2 input.status').inputValue();
