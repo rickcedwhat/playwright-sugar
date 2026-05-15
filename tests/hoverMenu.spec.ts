@@ -95,10 +95,9 @@ test.describe('hoverMenu()', () => {
   test('two-level: navigates and clicks the target item', async ({ page }) => {
     await page.setContent(TWO_LEVEL_HTML);
 
-    let clicked = false;
-    await page.exposeFunction('onTableClick', () => { clicked = true; });
     await page.evaluate(() => {
-      document.getElementById('table')!.addEventListener('click', () => (window as any).onTableClick());
+      (window as any).__clicked = false;
+      document.getElementById('table')!.addEventListener('click', () => { (window as any).__clicked = true; });
     });
 
     await hoverMenu([
@@ -106,16 +105,15 @@ test.describe('hoverMenu()', () => {
       page.locator('#table'),
     ]);
 
-    expect(clicked).toBe(true);
+    await page.waitForFunction(() => (window as any).__clicked === true);
   });
 
   test('three-level: navigates through two submenus and clicks', async ({ page }) => {
     await page.setContent(THREE_LEVEL_HTML);
 
-    let clicked = false;
-    await page.exposeFunction('on3x3Click', () => { clicked = true; });
     await page.evaluate(() => {
-      document.getElementById('cell-3x3')!.addEventListener('click', () => (window as any).on3x3Click());
+      (window as any).__clicked = false;
+      document.getElementById('cell-3x3')!.addEventListener('click', () => { (window as any).__clicked = true; });
     });
 
     await hoverMenu([
@@ -124,7 +122,7 @@ test.describe('hoverMenu()', () => {
       page.locator('#cell-3x3'),
     ]);
 
-    expect(clicked).toBe(true);
+    await page.waitForFunction(() => (window as any).__clicked === true);
   });
 
   test('click: false — returns final locator without clicking it', async ({ page }) => {
@@ -148,24 +146,22 @@ test.describe('hoverMenu()', () => {
   test('single item chain: hovers and clicks without traversal', async ({ page }) => {
     await page.setContent(TWO_LEVEL_HTML);
 
-    let clicked = false;
-    await page.exposeFunction('onInsertClick', () => { clicked = true; });
     await page.evaluate(() => {
-      document.getElementById('insert')!.addEventListener('click', () => (window as any).onInsertClick());
+      (window as any).__clicked = false;
+      document.getElementById('insert')!.addEventListener('click', () => { (window as any).__clicked = true; });
     });
 
     await hoverMenu([page.locator('#insert')]);
 
-    expect(clicked).toBe(true);
+    await page.waitForFunction(() => (window as any).__clicked === true);
   });
 
   test('submenu-below: safe-path also works when submenu opens downward', async ({ page }) => {
     await page.setContent(BELOW_MENU_HTML);
 
-    let clicked = false;
-    await page.exposeFunction('onSaveClick', () => { clicked = true; });
     await page.evaluate(() => {
-      document.getElementById('save')!.addEventListener('click', () => (window as any).onSaveClick());
+      (window as any).__clicked = false;
+      document.getElementById('save')!.addEventListener('click', () => { (window as any).__clicked = true; });
     });
 
     await hoverMenu([
@@ -173,7 +169,7 @@ test.describe('hoverMenu()', () => {
       page.locator('#save'),
     ]);
 
-    expect(clicked).toBe(true);
+    await page.waitForFunction(() => (window as any).__clicked === true);
   });
 
   test('returns the final locator in the chain', async ({ page }) => {

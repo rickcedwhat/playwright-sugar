@@ -30,6 +30,7 @@ export async function hoverMenu(chain: Locator[], options: HoverMenuOptions = {}
 
   // Activate the first item to open the initial menu
   await chain[0]!.hover();
+  if (stepDelay > 0) await page.waitForTimeout(stepDelay);
 
   for (let i = 0; i < chain.length - 1; i++) {
     const current = chain[i]!;
@@ -58,8 +59,9 @@ export async function hoverMenu(chain: Locator[], options: HoverMenuOptions = {}
       );
     }
 
-    // Navigate to next via L-shaped path to stay within open menu boundaries
+    // Navigate to next via L-shaped path, then explicitly hover to ensure its submenu opens
     await _safeMove(page, current, next);
+    await next.hover();
     if (stepDelay > 0) await page.waitForTimeout(stepDelay);
   }
 
