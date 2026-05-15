@@ -96,6 +96,29 @@ test.describe('Playwright Simple POC', () => {
     await expect(buyButton).toBeVisible();
   });
 
+  test('relator auto-mode works with pre-scoped locators (e.g. dialog.getByText)', async ({ page }) => {
+    await page.setContent(`
+      <dialog open>
+        <p>Confirm delete of <strong>Alice</strong></p>
+        <button>Cancel</button>
+        <button>Delete</button>
+      </dialog>
+      <p>Alice</p>
+      <button>Delete</button>
+    `);
+
+    const dialog = page.locator('dialog');
+    const anchor = dialog.getByText('Alice');
+    const target = dialog.getByRole('button', { name: 'Delete' });
+
+    const btn = relator(anchor, target);
+
+    // Must resolve to the button inside the dialog, not the one outside it
+    await expect(btn).toHaveCount(1);
+    const isInsideDialog = await btn.evaluate(el => el.closest('dialog') !== null);
+    expect(isInsideDialog).toBe(true);
+  });
+
   test('clickToOpen should retry if target missing', async ({ page }) => {
     await page.setContent(`
       <button id="trigger">Open</button>
