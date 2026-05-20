@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import {
   attemptAction,
-  detectPageState,
+  detectState,
   type AttemptActionOptions,
   type AttemptResolution,
   type Outcome,
@@ -20,7 +20,7 @@ export type DetectOptions = ActOptions & {
   timeout?: number;
 };
 
-/** One branch returned from the `.detect()` callback — forwarded to `detectPageState` / `attemptAction`. */
+/** One branch returned from the `.detect()` callback — forwarded to `detectState` / `attemptAction`. */
 export type DetectCandidate = {
   name: string;
   isSuccess: boolean;
@@ -208,9 +208,9 @@ export class Play {
               ...(c.locator !== undefined && { locator: c.locator }),
               ...(c.onOutcome !== undefined && { onOutcome: c.onOutcome }),
             }));
-            const detectParams: Parameters<typeof detectPageState>[0] = { outcomes };
+            const detectParams: Parameters<typeof detectState>[0] = { outcomes };
             if (act.timeout !== undefined) detectParams.timeout = act.timeout;
-            const detectResult = await detectPageState(detectParams);
+            const detectResult = await detectState(detectParams);
             lastOutcome = outcomeFromResolution(detectResult);
             console.log(`  ✅ ${actName}  (${Date.now() - t}ms) → outcome: ${lastOutcome.name}`);
             break;

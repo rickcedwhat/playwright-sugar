@@ -9,7 +9,7 @@ export type Outcome = {
   onOutcome?: (winner: Locator) => Promise<unknown>;
 };
 
-/** Resolution from {@link attemptAction} / {@link detectPageState} — maps to {@link PlayOutcome}. */
+/** Resolution from {@link attemptAction} / {@link detectState} — maps to {@link PlayOutcome}. */
 export type AttemptResolution = {
   isSuccess: boolean;
   outcome: string;
@@ -159,7 +159,7 @@ ${errorMsg}
   throw new Error(errorMessage);
 }
 
-export async function detectPageState(params: {
+export async function detectState(params: {
   outcomes: Outcome[];
   timeout?: number;
 }) {
