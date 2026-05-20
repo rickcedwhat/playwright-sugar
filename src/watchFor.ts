@@ -16,12 +16,17 @@ export function watchFor(
   opts?: WatchForOptions
 ): () => void {
   let active = true;
-  const interval = opts?.interval ?? 500;
+  const raw = opts?.interval;
+  const interval = (Number.isFinite(raw) && raw! > 0) ? raw! : 500;
 
   const poll = async () => {
     while (active) {
-      if (await locator.isVisible()) {
-        await callback(locator);
+      try {
+        if (await locator.isVisible()) {
+          await callback(locator);
+        }
+      } catch {
+        // transient errors (e.g. element detached between isVisible and callback) don't stop polling
       }
       await new Promise<void>(resolve => setTimeout(resolve, interval));
     }

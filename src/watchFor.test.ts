@@ -60,6 +60,19 @@ describe('watchFor', () => {
     expect(callback.mock.calls.length).toBe(countAtStop);
   });
 
+  it('continues polling after callback rejection', async () => {
+    const locator = makeLocator(true);
+    const callback = vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue(undefined);
+
+    const stop = watchFor(locator, callback, { interval: 10 });
+    await vi.advanceTimersByTimeAsync(25);
+    stop();
+
+    expect(callback.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('defaults to 500ms interval', async () => {
     const locator = makeLocator(true);
     const callback = vi.fn().mockResolvedValue(undefined);
@@ -74,5 +87,22 @@ describe('watchFor', () => {
     await vi.advanceTimersByTimeAsync(1);   // 500ms elapsed — second iteration
     expect(callback).toHaveBeenCalledTimes(2);
     stop();
+  });
+
+  it('falls back to 500ms for invalid interval values', async () => {
+    const locator = makeLocator(true);
+    const callback = vi.fn().mockResolvedValue(undefined);
+
+    for (const bad of [0, -1, NaN, Infinity, -Infinity]) {
+      callback.mockClear();
+      const stop = watchFor(locator, callback, { interval: bad });
+      await vi.advanceTimersByTimeAsync(0);   // first iteration
+      expect(callback).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(499); // still on 500ms default
+      expect(callback).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);   // 500ms — fires again
+      expect(callback).toHaveBeenCalledTimes(2);
+      stop();
+    }
   });
 });
