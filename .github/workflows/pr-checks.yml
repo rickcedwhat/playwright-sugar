@@ -71,8 +71,6 @@ jobs:
 
   unit-tests:
     name: Unit Tests (Vitest)
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
