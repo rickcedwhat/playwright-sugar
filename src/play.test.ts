@@ -9,20 +9,20 @@ import { Outcomes } from './outcomes.js';
 
 vi.mock('./attemptAction.js', () => ({
   attemptAction: vi.fn(),
-  detectPageState: vi.fn(),
+  detectState: vi.fn(),
 }));
 
-import { attemptAction, detectPageState } from './attemptAction.js';
+import { attemptAction, detectState } from './attemptAction.js';
 
 const mockAttemptAction = attemptAction as unknown as MockInstance;
-const mockDetectPageState = detectPageState as unknown as MockInstance;
+const mockDetectState = detectState as unknown as MockInstance;
 
 // Suppress play logging in tests
 beforeAll(() => { vi.spyOn(console, 'log').mockImplementation(() => {}); });
 afterAll(() => { vi.restoreAllMocks(); });
 beforeEach(() => {
   mockAttemptAction.mockReset();
-  mockDetectPageState.mockReset();
+  mockDetectState.mockReset();
 });
 
 function makePage(overrides: Partial<Record<string, unknown>> = {}): Page {
@@ -150,7 +150,7 @@ describe('.reload()', () => {
 
 describe('.detect() run result and third arg', () => {
   beforeEach(() => {
-    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'found', payload: undefined });
+    mockDetectState.mockResolvedValue({ isSuccess: true, outcome: 'found', payload: undefined });
   });
 
   it('play.run returns lastOutcome from detect', async () => {
@@ -165,9 +165,9 @@ describe('.detect() run result and third arg', () => {
     expect(lastOutcome).toMatchObject({ name: 'found', isSuccess: true });
   });
 
-  it('forwards optional onOutcome on detect candidates to detectPageState outcomes', async () => {
+  it('forwards optional onOutcome on detect candidates to detectState outcomes', async () => {
     const page = makePage();
-    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'a', payload: { picked: true } });
+    mockDetectState.mockResolvedValue({ isSuccess: true, outcome: 'a', payload: { picked: true } });
 
     const onOutcome = vi.fn().mockResolvedValue({ picked: true });
     const play = new Play().detect(() => [
@@ -176,7 +176,7 @@ describe('.detect() run result and third arg', () => {
 
     await play.run('label', { page });
 
-    expect(mockDetectPageState).toHaveBeenCalledWith(
+    expect(mockDetectState).toHaveBeenCalledWith(
       expect.objectContaining({
         outcomes: [
           expect.objectContaining({
@@ -275,7 +275,7 @@ describe('.attempt() and .cleanup()', () => {
 
   it('attempt trigger receives prior detect outcome as third argument', async () => {
     const page = makePage();
-    mockDetectPageState.mockResolvedValueOnce({
+    mockDetectState.mockResolvedValueOnce({
       isSuccess: true,
       outcome: 'empty',
       payload: 7,
@@ -625,7 +625,7 @@ describe('Play logging', () => {
 
   it('logs → outcome: <name> after detect', async () => {
     const page = makePage();
-    mockDetectPageState.mockResolvedValue({ isSuccess: true, outcome: 'found', payload: undefined });
+    mockDetectState.mockResolvedValue({ isSuccess: true, outcome: 'found', payload: undefined });
 
     const play = new Play().detect(() => [{ name: 'found', isSuccess: true, locator: mockLocator }]);
     await play.run('label', { page });
