@@ -11,3 +11,5 @@ export * from './syncStrategy.js';
 export * from './verifiedFill.js';
 export * from './findByScrolling.js';
 export * from './strategies.js';
+
+export * from './watchFor.js';
