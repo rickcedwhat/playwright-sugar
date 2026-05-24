@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:embed": "tsc && vite build --base /playwright-sugar/lab/ --outDir ../docs/public/lab --emptyOutDir",
     "preview": "vite preview"
   },
   "dependencies": {

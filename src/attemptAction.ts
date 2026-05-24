@@ -1,8 +1,10 @@
 import type { Locator } from '@playwright/test';
 
+export type AsyncLocatorFn = () => Locator | Promise<Locator>;
+
 export type Outcome = {
   name: string;
-  locator?: Locator;
+  locator?: Locator | AsyncLocatorFn;
   isSuccess: boolean;
   isTimeoutOutcome?: boolean;
   isActionErrorOutcome?: boolean;
@@ -49,8 +51,17 @@ export async function attemptAction(
         try {
           if (!o.locator) return { outcome: o, isVisible: false, locator: null };
           
-          const isVisible = await o.locator.isVisible();
-          return { outcome: o, isVisible, locator: o.locator };
+          let actualLocator: Locator | null = null;
+          if (typeof o.locator === 'function') {
+            actualLocator = await o.locator();
+          } else {
+            actualLocator = o.locator;
+          }
+
+          if (!actualLocator) return { outcome: o, isVisible: false, locator: null };
+          
+          const isVisible = await actualLocator.isVisible();
+          return { outcome: o, isVisible, locator: actualLocator };
         } catch (error: unknown) {
           const errorMsg = error instanceof Error ? error.message : '';
           const isStrictModeError =
@@ -92,8 +103,15 @@ ${errorMsg}
         normalizedOutcomes.map(async (o) => {
           try {
             if (!o.locator) return { outcome: o, isVisible: false, locator: null };
-            const isVisible = await o.locator.isVisible();
-            return { outcome: o, isVisible, locator: o.locator };
+            let actualLocator: Locator | null = null;
+            if (typeof o.locator === 'function') {
+              actualLocator = await o.locator();
+            } else {
+              actualLocator = o.locator;
+            }
+            if (!actualLocator) return { outcome: o, isVisible: false, locator: null };
+            const isVisible = await actualLocator.isVisible();
+            return { outcome: o, isVisible, locator: actualLocator };
           } catch (e) {
             return { outcome: o, isVisible: false, locator: null };
           }

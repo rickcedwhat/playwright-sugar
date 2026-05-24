@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import {
   attemptAction,
   detectState,
+  type AsyncLocatorFn,
   type AttemptActionOptions,
   type AttemptResolution,
   type Outcome,
@@ -13,18 +14,23 @@ export type { AttemptActionOptions } from './attemptAction.js';
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export type ActOptions = {
-  skip?: boolean;
+  skip?: boolean | ((ctx: PlayCtx, lastOutcome?: PlayOutcome) => boolean);
 };
 
 export type DetectOptions = ActOptions & {
   timeout?: number;
 };
 
+export type RunOptions = {
+  indent?: number;
+  labelSuffix?: string;
+};
+
 /** One branch returned from the `.detect()` callback — forwarded to `detectState` / `attemptAction`. */
 export type DetectCandidate = {
   name: string;
   isSuccess: boolean;
-  locator?: Locator;
+  locator?: Locator | AsyncLocatorFn;
   /**
    * When this branch wins, called with the winning locator; return value becomes the next act’s
    * third-argument `outcome.payload` (see {@link PlayOutcome}).
@@ -71,8 +77,8 @@ export type ActFn = (page: Page, ctx: PlayCtx, outcome: PlayOutcome | undefined)
 // ── Internal act record (discriminated union) ─────────────────────────────────
 
 type ActRecord =
-  | { kind: 'act'; name: string; fn: ActFn; skip: boolean }
-  | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; skip: boolean }
+  | { kind: 'act'; name: string; fn: ActFn; skip?: ActOptions['skip'] }
+  | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; skip?: ActOptions['skip'] }
   | {
       kind: 'attempt';
       name: string;
@@ -80,8 +86,8 @@ type ActRecord =
       outcomes: OutcomeSpec[];
       opts?: AttemptActionOptions;
     }
-  | { kind: 'cleanup'; fn: ActFn; skip: boolean }
-  | { kind: 'reload'; opts: Parameters<Page['reload']>[0] | undefined; skip: boolean };
+  | { kind: 'cleanup'; fn: ActFn; skip?: ActOptions['skip'] }
+  | { kind: 'reload'; opts: Parameters<Page['reload']>[0] | undefined; skip?: ActOptions['skip'] };
 
 // ── Play ──────────────────────────────────────────────────────────────────────
 
@@ -99,19 +105,19 @@ export class Play {
   // ── Act builders ────────────────────────────────────────────────────────────
 
   act(name: string, fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'act', name, fn, skip: opts.skip ?? false });
+    return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
 
   nav(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'act', name: 'nav', fn, skip: opts.skip ?? false });
+    return this._append({ kind: 'act', name: 'nav', fn, skip: opts.skip });
   }
 
   prep(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'act', name: 'prep', fn, skip: opts.skip ?? false });
+    return this._append({ kind: 'act', name: 'prep', fn, skip: opts.skip });
   }
 
   reload(reloadOpts?: Parameters<Page['reload']>[0], opts: ActOptions = {}): Play {
-    return this._append({ kind: 'reload', opts: reloadOpts, skip: opts.skip ?? false });
+    return this._append({ kind: 'reload', opts: reloadOpts, skip: opts.skip });
   }
 
   detect(fn: (page: Page) => DetectCandidate[], opts: DetectOptions = {}): Play {
@@ -119,7 +125,7 @@ export class Play {
       kind: 'detect',
       fn,
       ...(opts.timeout !== undefined && { timeout: opts.timeout }),
-      skip: opts.skip ?? false,
+      skip: opts.skip,
     });
   }
 
@@ -159,20 +165,25 @@ export class Play {
   }
 
   cleanup(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'cleanup', fn, skip: opts.skip ?? false });
+    return this._append({ kind: 'cleanup', fn, skip: opts.skip });
   }
 
   // ── Execution ────────────────────────────────────────────────────────────────
 
-  async run(label: string, ctx: PlayCtx): Promise<PlayRunResult> {
+  async run(label: string, ctx: PlayCtx, opts?: RunOptions): Promise<PlayRunResult> {
     const page = ctx['page'] as Page;
     if (!page) throw new Error(`[${label}] No page in PlayCtx — bind one via Playbook.withCtx({ page }) or .withCtx(name, { page })`);
+
+    const indentLevel = opts?.indent ?? 0;
+    const pPrefix = '  '.repeat(indentLevel);
+    const aPrefix = pPrefix + '  ';
+    const suffix = opts?.labelSuffix ? ` ${opts.labelSuffix}` : '';
 
     const mainActs = this._acts.filter(a => a.kind !== 'cleanup');
     const cleanupActs = this._acts.filter(a => a.kind === 'cleanup');
 
     await page.bringToFront();
-    console.log(`▶ Play: ${label}`);
+    console.log(`${pPrefix}▶ ${label}${suffix}`);
 
     let attemptReached = false;
     let runError: Error | undefined;
@@ -181,8 +192,15 @@ export class Play {
     for (const act of mainActs) {
       const actName = _actLabel(act);
 
-      if (runError || (act.kind !== 'attempt' && act.skip)) {
-        console.log(`  ⏭  ${actName}  SKIPPED`);
+      let shouldSkip = false;
+      if (runError) {
+        shouldSkip = true;
+      } else if (act.kind !== 'attempt' && act.skip !== undefined) {
+        shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+      }
+
+      if (shouldSkip) {
+        console.log(`${aPrefix}⏭  ${actName}  SKIPPED`);
         continue;
       }
 
@@ -192,12 +210,12 @@ export class Play {
         switch (act.kind) {
           case 'act':
             await act.fn(page, ctx, lastOutcome);
-            console.log(`  ✅ ${actName}  (${Date.now() - t}ms)`);
+            console.log(`${aPrefix}✅ ${actName}  (${Date.now() - t}ms)`);
             break;
 
           case 'reload':
             await page.reload(act.opts);
-            console.log(`  ✅ ${actName}  (${Date.now() - t}ms)`);
+            console.log(`${aPrefix}✅ ${actName}  (${Date.now() - t}ms)`);
             break;
 
           case 'detect': {
@@ -212,27 +230,24 @@ export class Play {
             if (act.timeout !== undefined) detectParams.timeout = act.timeout;
             const detectResult = await detectState(detectParams);
             lastOutcome = outcomeFromResolution(detectResult);
-            console.log(`  ✅ ${actName}  (${Date.now() - t}ms) → outcome: ${lastOutcome.name}`);
+            console.log(`${aPrefix}✅ ${actName}  (${Date.now() - t}ms) → outcome: ${lastOutcome.name}`);
             break;
           }
 
           case 'attempt': {
             attemptReached = true;
-            const resolvedOutcomes: Outcome[] = act.outcomes.map(o => ({
+            const resolvedOutcomes: Outcome[] = await Promise.all(act.outcomes.map(async o => ({
               name: o.name,
               isSuccess: o.isSuccess,
               ...(o.isTimeoutOutcome && { isTimeoutOutcome: true }),
               ...(o.isActionErrorOutcome && { isActionErrorOutcome: true }),
               ...(o.onOutcome && { onOutcome: o.onOutcome }),
               ...(o.locator !== undefined && {
-                locator: typeof o.locator === 'function' ? o.locator(page, ctx) : o.locator,
+                locator: typeof o.locator === 'function' ? await (o.locator as Function)(page, ctx) : o.locator,
               }),
-            }));
+            })));
 
-            const timeoutOutcome = act.outcomes.find(o => o.isTimeoutOutcome);
-            const resolvedTimeout = act.opts?.timeout ?? timeoutOutcome?.after;
-            const attemptOpts: AttemptActionOptions | undefined =
-              resolvedTimeout !== undefined ? { ...act.opts, timeout: resolvedTimeout } : act.opts;
+            const attemptOpts = act.opts;
 
             const incoming = lastOutcome;
             const result = await attemptAction(
@@ -244,9 +259,9 @@ export class Play {
 
             const ms = Date.now() - t;
             if (result.isSuccess) {
-              console.log(`  ✅ ${actName}  (${ms}ms) → outcome: ${result.outcome}`);
+              console.log(`${aPrefix}✅ ${actName}  (${ms}ms) → outcome: ${result.outcome}`);
             } else {
-              console.log(`  ❌ ${actName}  (${ms}ms) → outcome: ${result.outcome}`);
+              console.log(`${aPrefix}❌ ${actName}  (${ms}ms) → outcome: ${result.outcome}`);
             }
             break;
           }
@@ -255,7 +270,7 @@ export class Play {
         const ms = Date.now() - t;
         const raw = err instanceof Error ? err : new Error(String(err));
         const wrapped = new Error(`[${label} > ${actName}] ${raw.message}`, { cause: raw });
-        console.log(`  ❌ ${actName}  (${ms}ms) → ${wrapped.message}`);
+        console.log(`${aPrefix}❌ ${actName}  (${ms}ms) → ${wrapped.message}`);
         runError = wrapped;
       }
     }
@@ -264,26 +279,27 @@ export class Play {
       for (const act of cleanupActs) {
         if (act.kind !== 'cleanup') continue;
 
-        if (act.skip) {
-          console.log(`  ⏭  cleanup  SKIPPED`);
+        const shouldSkipCleanup = typeof act.skip === 'function' ? await act.skip(ctx, lastOutcome) : act.skip;
+        if (shouldSkipCleanup) {
+          console.log(`${aPrefix}⏭  cleanup  SKIPPED`);
           continue;
         }
 
         const t = Date.now();
         try {
           await act.fn(page, ctx, lastOutcome);
-          console.log(`  ✅ cleanup  (${Date.now() - t}ms)`);
+          console.log(`${aPrefix}✅ cleanup  (${Date.now() - t}ms)`);
         } catch (err: unknown) {
           const ms = Date.now() - t;
           const raw = err instanceof Error ? err : new Error(String(err));
           const wrapped = new Error(`[${label} > cleanup] ${raw.message}`, { cause: raw });
-          console.log(`  ❌ cleanup  (${ms}ms) → ${wrapped.message}`);
+          console.log(`${aPrefix}❌ cleanup  (${ms}ms) → ${wrapped.message}`);
           if (!runError) runError = wrapped;
         }
       }
     } else if (attemptReached && runError) {
       for (const act of cleanupActs) {
-        if (act.kind === 'cleanup') console.log(`  ⏭  cleanup  SKIPPED`);
+        if (act.kind === 'cleanup') console.log(`${aPrefix}⏭  cleanup  SKIPPED`);
       }
     }
 

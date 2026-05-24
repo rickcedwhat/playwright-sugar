@@ -7,11 +7,10 @@ import type { Outcome } from './attemptAction.js';
  * to derive the `timeout` parameter.
  */
 export type OutcomeSpec = Omit<Outcome, 'locator'> & {
-  locator?: Locator | ((page: Page, ctx: Record<string, unknown>) => Locator);
-  after?: number;
+  locator?: Locator | ((page: Page, ctx: Record<string, unknown>) => Locator | Promise<Locator>);
 };
 
-type LocatorArg = Locator | ((page: Page, ctx: Record<string, unknown>) => Locator);
+type LocatorArg = Locator | ((page: Page, ctx: Record<string, unknown>) => Locator | Promise<Locator>);
 
 type OnOutcome = { onOutcome?: (winner: Locator) => Promise<unknown> };
 
@@ -53,18 +52,11 @@ function failureOutcome(
   };
 }
 
-function timeoutOutcome(): OutcomeSpec;
-function timeoutOutcome(after: number): OutcomeSpec;
-function timeoutOutcome(name: string, after?: number): OutcomeSpec;
-function timeoutOutcome(nameOrAfter?: string | number, after?: number): OutcomeSpec {
-  if (typeof nameOrAfter === 'number') {
-    return { name: 'timeout', isSuccess: false, isTimeoutOutcome: true, after: nameOrAfter };
-  }
+function timeoutOutcome(name?: string): OutcomeSpec {
   return {
-    name: nameOrAfter ?? 'timeout',
+    name: name ?? 'timeout',
     isSuccess: false,
     isTimeoutOutcome: true,
-    ...(after !== undefined && { after }),
   };
 }
 

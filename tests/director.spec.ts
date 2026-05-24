@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { Director, Playbook, Play, Outcomes, SyncStrategy } from '../src/index.js';
+import { Director, Playbook, Play, Outcomes } from '../src/index.js';
 
 // ── Dataset Playbook ──────────────────────────────────────────────────────────
 //
@@ -38,8 +38,9 @@ const datasetPb = new Playbook('DatasetPlaybook', {
       [
         Outcomes.success(page => page.getByText('This dataset is empty')),
         Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
-        Outcomes.timeout(10_000),
+        Outcomes.timeout(),
       ],
+      { timeout: 10_000 }
     ),
 
   update: ({ name, newName }: UpdateParams) => new Play()
@@ -57,8 +58,9 @@ const datasetPb = new Playbook('DatasetPlaybook', {
       [
         Outcomes.success(page => page.getByText('Updated dataset')),
         Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
-        Outcomes.timeout(5000),
+        Outcomes.timeout(),
       ],
+      { timeout: 5000 }
     )
     .cleanup(async (page, _ctx, outcome) => {
       if (outcome?.isSuccess) {
@@ -66,7 +68,7 @@ const datasetPb = new Playbook('DatasetPlaybook', {
         await page.getByRole('menuitem', { name: 'Rename' }).click();
         await page.getByRole('textbox').fill(name);
         await page.getByRole('button', { name: 'Save' }).click();
-        await page.getByText('Updated dataset').waitFor();
+        await page.getByText('Updated dataset').first().waitFor();
       } else {
         await page.keyboard.press('Escape');
       }
@@ -83,8 +85,9 @@ const datasetPb = new Playbook('DatasetPlaybook', {
       [
         Outcomes.success(page => page.getByText('Deleted dataset')),
         Outcomes.failure(page => page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to/i })),
-        Outcomes.timeout(5000),
+        Outcomes.timeout(),
       ],
+      { timeout: 5000 }
     ),
 });
 
@@ -228,7 +231,7 @@ test('ensureExists skips create when dataset already exists', async ({ page }) =
   await expect(rows).toHaveCount(1);
 });
 
-test('ensureExists with SyncStrategy.withReload() syncs to a second page', async ({ page, context }) => {
+test('ensureExists with shouldReloadSync syncs to a second page', async ({ page, context }) => {
   const userPage = await context.newPage();
   await userPage.goto('/');
 
@@ -237,7 +240,7 @@ test('ensureExists with SyncStrategy.withReload() syncs to a second page', async
 
   await director.ensureExists(adminPb, { name: 'Synced Dataset' }, {
     syncTo: userPage,
-    syncStrategy: SyncStrategy.withReload(),
+    shouldReloadSync: true,
   });
 
   // Verify dataset visible on user page after sync
@@ -249,18 +252,20 @@ test('ensureExists with SyncStrategy.withReload() syncs to a second page', async
 
 // ── reload skip flag ──────────────────────────────────────────────────────────
 
-test('exists with withReload: true picks up data written after initial page load', async ({ page }) => {
+test('recheckBeforeCreate with shouldReload picks up data written after initial page load', async ({ page }) => {
   // Inject a dataset into localStorage after the page has already loaded
   // (simulating data written by another tab/context)
   await page.evaluate((n: string) => {
     localStorage.setItem('sugar-lab-datasets', JSON.stringify([{ id: '1', name: n }]));
   }, 'Late Dataset');
 
-  const director = new Director();
+  const director = new Director({
+    ensureExists: { recheckBeforeCreate: { maxRetries: 1, shouldReload: true } },
+  });
   const pb = datasetPb.withCtx({ page });
 
-  // withReload: true — page reloads, React reinitialises from localStorage, finds the dataset
-  await director.ensureExists(pb, { name: 'Late Dataset', withReload: true });
+  // shouldReload: true — page reloads, React reinitialises from localStorage, finds the dataset
+  await director.ensureExists(pb, { name: 'Late Dataset' });
 
   // Only 1 dataset — create was NOT run because exists returned found after reload
   const stored = await page.evaluate<{ name: string }[]>(() =>

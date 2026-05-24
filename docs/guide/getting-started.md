@@ -99,4 +99,6 @@ await editBtn.click();
 
 ## Try the Sugar Lab
 
-The repo includes a small **Sugar Lab** app (Vite + React) used by integration tests. You can run it locally and follow [Sugar Lab (live)](/guide/sugar-lab) for embedded examples (`?role=viewer`, empty vs seeded data, and more).
+* The repo ships a Sugar Lab fixture (`lab/`) exercised by `tests/director.spec.ts`.
+* Explore the [Sugar Lab](/guide/sugar-lab) using the interactive **Play explorer** (which features code snippets, illustrative UI, and branching modals).
+* Read `lab/README.md` for instructions on running the real SPA locally.
