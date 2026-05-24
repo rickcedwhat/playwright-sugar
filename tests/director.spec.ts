@@ -68,7 +68,7 @@ const datasetPb = new Playbook('DatasetPlaybook', {
         await page.getByRole('menuitem', { name: 'Rename' }).click();
         await page.getByRole('textbox').fill(name);
         await page.getByRole('button', { name: 'Save' }).click();
-        await page.getByText('Updated dataset').first().waitFor();
+        await page.locator('li[data-sonner-toast]').filter({ hasText: 'Updated dataset' }).last().waitFor();
       } else {
         await page.keyboard.press('Escape');
       }

@@ -3,8 +3,8 @@ import type { Outcome } from './attemptAction.js';
 
 /**
  * An outcome as configured by the user — `locator` may be a page-bound function
- * resolved by Play before calling attemptAction. `after` is consumed by Play
- * to derive the `timeout` parameter.
+ * resolved by Play before calling attemptAction. `timeout` is passed directly
+ * as `AttemptActionOptions.timeout` to `attemptAction`; there is no `after` field.
  */
 export type OutcomeSpec = Omit<Outcome, 'locator'> & {
   locator?: Locator | ((page: Page, ctx: Record<string, unknown>) => Locator | Promise<Locator>);

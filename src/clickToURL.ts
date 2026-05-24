@@ -23,26 +23,41 @@ export async function clickToURL(
     }
 
     const attemptTimeout = Math.min(subTimeout, remaining);
+    const controller = new AbortController();
+    const { signal } = controller;
+    let globalTimerId: ReturnType<typeof setTimeout> | undefined;
 
     try {
       await Promise.race([
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Global timeout exceeded')), remaining)),
+        new Promise<never>((_, reject) => {
+          globalTimerId = setTimeout(() => {
+            controller.abort();
+            reject(new Error('__global_timeout__'));
+          }, remaining);
+        }),
         (async () => {
           await trigger.click({ timeout: attemptTimeout });
+          if (signal.aborted) return;
           await page.waitForURL(expectedUrl, { timeout: attemptTimeout, waitUntil: 'commit' });
         })(),
       ]);
+      clearTimeout(globalTimerId);
+      controller.abort(); // cancel any still-running inner branch
       return; // Success
     } catch (e) {
-      if (Date.now() - startTime > timeout) {
+      clearTimeout(globalTimerId);
+      const msg = e instanceof Error ? e.message : String(e);
+      const isGlobalTimeout = msg === '__global_timeout__' || signal.aborted;
+
+      if (isGlobalTimeout || Date.now() - startTime > timeout) {
         throw new Error(`clickToURL timed out after ${timeout}ms. Never navigated to expected URL.`);
       }
-      
+
       if (i === maxRetries) {
-        throw new Error(`clickToURL failed after ${maxRetries} retries. Error: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(`clickToURL failed after ${maxRetries} retries. Error: ${msg}`);
       }
-      
-      console.log(`clickToURL: Navigation not detected after click (attempt ${i + 1}). Error: ${e instanceof Error ? e.message : String(e)}. Retrying in 100ms...`);
+
+      console.log(`clickToURL: Navigation not detected after click (attempt ${i + 1}). Error: ${msg}. Retrying in 100ms...`);
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }

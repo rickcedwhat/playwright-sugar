@@ -120,7 +120,12 @@ export class Director {
     }
 
     if (!existsResult.isSuccess) {
-      await this._runPlay(playbook, 'create', params, { indent: 1 });
+      const createResult = await this._runPlay(playbook, 'create', params, { indent: 1 });
+      if (!createResult.isSuccess) {
+        throw new Error(
+          `[${playbook.runLabel('create')}] ensureExists: create play did not succeed (outcome: "${createResult.outcome}")`
+        );
+      }
     }
 
     if (opts?.syncTo) {

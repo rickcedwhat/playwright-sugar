@@ -196,7 +196,15 @@ export class Play {
       if (runError) {
         shouldSkip = true;
       } else if (act.kind !== 'attempt' && act.skip !== undefined) {
-        shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+        try {
+          shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+        } catch (err: unknown) {
+          const raw = err instanceof Error ? err : new Error(String(err));
+          const wrapped = new Error(`[${label} > ${actName}] skip predicate threw: ${raw.message}`, { cause: raw });
+          console.log(`${aPrefix}❌ ${actName}  skip predicate threw → ${wrapped.message}`);
+          runError = wrapped;
+          shouldSkip = true;
+        }
       }
 
       if (shouldSkip) {
@@ -279,7 +287,16 @@ export class Play {
       for (const act of cleanupActs) {
         if (act.kind !== 'cleanup') continue;
 
-        const shouldSkipCleanup = typeof act.skip === 'function' ? await act.skip(ctx, lastOutcome) : act.skip;
+        let shouldSkipCleanup: boolean | undefined;
+        try {
+          shouldSkipCleanup = typeof act.skip === 'function' ? await act.skip(ctx, lastOutcome) : act.skip;
+        } catch (err: unknown) {
+          const raw = err instanceof Error ? err : new Error(String(err));
+          const wrapped = new Error(`[${label} > cleanup] skip predicate threw: ${raw.message}`, { cause: raw });
+          console.log(`${aPrefix}❌ cleanup  skip predicate threw → ${wrapped.message}`);
+          if (!runError) runError = wrapped;
+          continue;
+        }
         if (shouldSkipCleanup) {
           console.log(`${aPrefix}⏭  cleanup  SKIPPED`);
           continue;
