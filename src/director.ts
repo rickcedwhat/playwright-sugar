@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
-import type { Playbook } from './playbook.js';
+import type { Playbook, PlaybookPlays } from './playbook.js';
+import type { RunOptions } from './play.js';
 export type RecheckStrategy = {
   maxRetries: number;
   shouldReload?: boolean; // If true, reloads the page before retrying
@@ -10,6 +11,7 @@ export type DirectorConfig = {
     recheckBeforeCreate?: RecheckStrategy;
     shouldReloadSync?: boolean; // Default behavior when syncTo is provided
   };
+  ambiguityBufferMs?: number;
 };
 
 export type EnsureExistsOptions = {
@@ -34,11 +36,12 @@ export class Director {
    * Runs a play and asserts that it resulted in a **success** outcome.
    * Throws if the play produced no detect/attempt outcome or a failure outcome.
    */
-  async assertCan(
-    playbook: Playbook,
-    playName: string,
-    params: unknown
+  async assertCan<P extends PlaybookPlays, K extends Extract<keyof P, string>>(
+    playbook: Playbook<P>,
+    playName: K,
+    ...args: Parameters<P[K]> extends [infer Param] ? [Param] : []
   ): Promise<PlayResult> {
+    const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Assert:${scopeStr} can ${playName} ${playbook.name}`);
     const result = await this._runPlay(playbook, playName, params, { indent: 1 });
@@ -55,11 +58,12 @@ export class Director {
    * Runs a play and asserts that it resulted in a **failure** outcome.
    * Throws if the play produced a success outcome.
    */
-  async assertCannot(
-    playbook: Playbook,
-    playName: string,
-    params: unknown
+  async assertCannot<P extends PlaybookPlays, K extends Extract<keyof P, string>>(
+    playbook: Playbook<P>,
+    playName: K,
+    ...args: Parameters<P[K]> extends [infer Param] ? [Param] : []
   ): Promise<PlayResult> {
+    const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Assert:${scopeStr} cannot ${playName} ${playbook.name}`);
     const result = await this._runPlay(playbook, playName, params, { indent: 1 });
@@ -76,7 +80,12 @@ export class Director {
    * Runs a play and returns the outcome without asserting.
    * Use with `assertCan` / `assertCannot` when you need to aggregate results (e.g. permission matrices).
    */
-  async run(playbook: Playbook, playName: string, params: unknown): Promise<PlayResult> {
+  async run<P extends PlaybookPlays, K extends Extract<keyof P, string>>(
+    playbook: Playbook<P>,
+    playName: K,
+    ...args: Parameters<P[K]> extends [infer Param] ? [Param] : []
+  ): Promise<PlayResult> {
+    const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Run:${scopeStr} ${playName} ${playbook.name}`);
     const result = await this._runPlay(playbook, playName, params, { indent: 1 });
@@ -92,11 +101,23 @@ export class Director {
    *
    * Requires the Playbook to have `exists` and `create` plays.
    */
-  async ensureExists(
-    playbook: Playbook,
-    params: unknown,
-    opts?: EnsureExistsOptions
+  async ensureExists<P extends PlaybookPlays>(
+    playbook: Playbook<P>,
+    ...args: Parameters<P['exists']> extends [infer Param] ? [Param, EnsureExistsOptions?] : [EnsureExistsOptions?]
   ): Promise<void> {
+    const isOptions = (arg: unknown): arg is EnsureExistsOptions => 
+      arg !== null && typeof arg === 'object' && ('syncTo' in arg || 'shouldReloadSync' in arg || 'recheckBeforeCreate' in arg);
+    
+    let params: unknown = undefined;
+    let opts: EnsureExistsOptions | undefined = undefined;
+
+    if (args.length === 1) {
+      if (isOptions(args[0])) opts = args[0];
+      else params = args[0];
+    } else if (args.length === 2) {
+      params = args[0];
+      opts = args[1] as EnsureExistsOptions;
+    }
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Ensure:${scopeStr} ${playbook.name} exists`);
 
@@ -177,7 +198,11 @@ export class Director {
     const ctx = playbook.buildCtx();
     const label = playbook.runLabel(playName);
 
-    const { lastOutcome } = await play.run(label, ctx, opts);
+    const runOpts: RunOptions = { ...opts };
+    if (this.config?.ambiguityBufferMs !== undefined) {
+      runOpts.ambiguityBufferMs = this.config.ambiguityBufferMs;
+    }
+    const { lastOutcome } = await play.run(label, ctx, runOpts);
 
     if (lastOutcome) {
       const r: PlayResult = {

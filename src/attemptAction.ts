@@ -22,6 +22,7 @@ export type AttemptResolution = {
 /** Options for `attemptAction` / `Play.attempt` — extend with future flags without breaking the positional API. */
 export type AttemptActionOptions = {
   timeout?: number;
+  ambiguityBufferMs?: number;
 };
 
 export async function attemptAction(
@@ -45,33 +46,37 @@ export async function attemptAction(
   const strictModeErrorsLogged = new Set<string>();
 
   // Polling Phase
-  while (Date.now() - startTime < timeout) {
-    const results = await Promise.all(
-      normalizedOutcomes.map(async (o) => {
-        try {
-          if (!o.locator) return { outcome: o, isVisible: false, locator: null };
-          
-          let actualLocator: Locator | null = null;
-          if (typeof o.locator === 'function') {
-            actualLocator = await o.locator();
-          } else {
-            actualLocator = o.locator;
-          }
+  const bufferMs = opts?.ambiguityBufferMs ?? 150;
+  
+  type Winner = { outcome: Outcome; locator: Locator };
+  let firstWinner: Winner | null = null;
+  const winners: Winner[] = [];
 
-          if (!actualLocator) return { outcome: o, isVisible: false, locator: null };
-          
-          const isVisible = await actualLocator.isVisible();
-          return { outcome: o, isVisible, locator: actualLocator };
-        } catch (error: unknown) {
-          const errorMsg = error instanceof Error ? error.message : '';
-          const isStrictModeError =
-            errorMsg.includes("strict mode violation") ||
-            (errorMsg.includes("resolved to") && errorMsg.includes("elements")) ||
-            errorMsg.includes("expected single element");
+  const candidatePromises = normalizedOutcomes.map(async (o) => {
+    while (Date.now() - startTime < timeout) {
+      try {
+        if (!o.locator) return null;
+        
+        let actualLocator: Locator | null = null;
+        if (typeof o.locator === 'function') {
+          actualLocator = await o.locator();
+        } else {
+          actualLocator = o.locator;
+        }
 
-          if (isStrictModeError && !strictModeErrorsLogged.has(o.name)) {
-            strictModeErrorsLogged.add(o.name);
-            console.error(`
+        if (actualLocator && await actualLocator.isVisible()) {
+          return { outcome: o, locator: actualLocator };
+        }
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : '';
+        const isStrictModeError =
+          errorMsg.includes("strict mode violation") ||
+          (errorMsg.includes("resolved to") && errorMsg.includes("elements")) ||
+          errorMsg.includes("expected single element");
+
+        if (isStrictModeError && !strictModeErrorsLogged.has(o.name)) {
+          strictModeErrorsLogged.add(o.name);
+          console.error(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚠️  STRICT MODE VIOLATION DETECTED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -87,66 +92,65 @@ ${errorMsg}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
-          }
-          return { outcome: o, isVisible: false, locator: null };
         }
-      })
-    );
-
-    const winners = results.filter((r) => r.isVisible);
-
-    if (winners.length > 0) {
-      // Collision Policing
+      }
+      
       await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return null;
+  });
 
-      const secondCheck = await Promise.all(
-        normalizedOutcomes.map(async (o) => {
-          try {
-            if (!o.locator) return { outcome: o, isVisible: false, locator: null };
-            let actualLocator: Locator | null = null;
-            if (typeof o.locator === 'function') {
-              actualLocator = await o.locator();
-            } else {
-              actualLocator = o.locator;
-            }
-            if (!actualLocator) return { outcome: o, isVisible: false, locator: null };
-            const isVisible = await actualLocator.isVisible();
-            return { outcome: o, isVisible, locator: actualLocator };
-          } catch (e) {
-            return { outcome: o, isVisible: false, locator: null };
-          }
-        })
-      );
-
-      const realWinners = secondCheck.filter((r) => r.isVisible);
-
-      if (realWinners.length > 1) {
-        throw new Error(
-          `Ambiguous Page State: Multiple outcomes detected: [${realWinners
-            .map((w) => w.outcome.name)
-            .join(', ')}]. Fix your locators!`
-        );
-      }
-
-      if (realWinners.length === 1) {
-        const winner = realWinners[0];
-        if (!winner) throw new Error('Winner vanished during processing');
-        
-        let payload: unknown | undefined = undefined;
-        if (winner.outcome.onOutcome && winner.locator) {
-          payload = await winner.outcome.onOutcome(winner.locator);
-        }
-        const resolution: AttemptResolution = {
-          isSuccess: winner.outcome.isSuccess,
-          outcome: winner.outcome.name,
-        };
-        if (payload !== undefined) resolution.payload = payload;
-        if (winner.locator != null) resolution.locator = winner.locator;
-        return resolution;
-      }
+  await new Promise<void>((resolve) => {
+    if (candidatePromises.length === 0) {
+      resolve();
+      return;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    let resolvedCount = 0;
+    let bufferTimer: NodeJS.Timeout | null = null;
+
+    candidatePromises.forEach(p => {
+      p.then(winner => {
+        resolvedCount++;
+        if (winner) {
+          winners.push(winner);
+          if (!firstWinner) {
+            firstWinner = winner;
+            bufferTimer = setTimeout(() => resolve(), bufferMs);
+          }
+        }
+        
+        if (resolvedCount === candidatePromises.length) {
+          if (bufferTimer) clearTimeout(bufferTimer);
+          resolve();
+        }
+      });
+    });
+  });
+
+  if (winners.length > 1) {
+    throw new Error(
+      `Ambiguous Page State: Multiple outcomes detected: [${winners
+        .map((w) => w.outcome.name)
+        .join(', ')}]. Fix your locators!`
+    );
+  }
+
+  if (winners.length === 1) {
+    const winner = winners[0];
+    if (!winner) throw new Error('Winner vanished during processing');
+    
+    let payload: unknown | undefined = undefined;
+    if (winner.outcome.onOutcome && winner.locator) {
+      payload = await winner.outcome.onOutcome(winner.locator);
+    }
+    const resolution: AttemptResolution = {
+      isSuccess: winner.outcome.isSuccess,
+      outcome: winner.outcome.name,
+    };
+    if (payload !== undefined) resolution.payload = payload;
+    if (winner.locator != null) resolution.locator = winner.locator;
+    return resolution;
   }
 
   // Timeout Handling — no visible winner; do not run onOutcome (no winning locator).
@@ -180,10 +184,14 @@ ${errorMsg}
 export async function detectState(params: {
   outcomes: Outcome[];
   timeout?: number;
+  ambiguityBufferMs?: number;
 }) {
   return attemptAction(
     async () => {},
     params.outcomes,
-    { timeout: params.timeout ?? 5000 }
+    { 
+      timeout: params.timeout ?? 5000,
+      ...(params.ambiguityBufferMs !== undefined && { ambiguityBufferMs: params.ambiguityBufferMs })
+    }
   );
 }

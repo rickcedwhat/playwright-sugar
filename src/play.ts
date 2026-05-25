@@ -19,11 +19,13 @@ export type ActOptions = {
 
 export type DetectOptions = ActOptions & {
   timeout?: number;
+  ambiguityBufferMs?: number;
 };
 
 export type RunOptions = {
   indent?: number;
   labelSuffix?: string;
+  ambiguityBufferMs?: number;
 };
 
 /** One branch returned from the `.detect()` callback — forwarded to `detectState` / `attemptAction`. */
@@ -78,7 +80,7 @@ export type ActFn = (page: Page, ctx: PlayCtx, outcome: PlayOutcome | undefined)
 
 type ActRecord =
   | { kind: 'act'; name: string; fn: ActFn; skip?: ActOptions['skip'] }
-  | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; skip?: ActOptions['skip'] }
+  | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; ambiguityBufferMs?: number; skip?: ActOptions['skip'] }
   | {
       kind: 'attempt';
       name: string;
@@ -125,6 +127,7 @@ export class Play {
       kind: 'detect',
       fn,
       ...(opts.timeout !== undefined && { timeout: opts.timeout }),
+      ...(opts.ambiguityBufferMs !== undefined && { ambiguityBufferMs: opts.ambiguityBufferMs }),
       skip: opts.skip,
     });
   }
@@ -239,6 +242,8 @@ export class Play {
             }));
             const detectParams: Parameters<typeof detectState>[0] = { outcomes };
             if (act.timeout !== undefined) detectParams.timeout = act.timeout;
+            if (act.ambiguityBufferMs !== undefined) detectParams.ambiguityBufferMs = act.ambiguityBufferMs;
+            else if (opts?.ambiguityBufferMs !== undefined) detectParams.ambiguityBufferMs = opts.ambiguityBufferMs;
             const detectResult = await detectState(detectParams);
             lastOutcome = outcomeFromResolution(detectResult);
             console.log(`${aPrefix}✅ ${actName}  (${Date.now() - t}ms) → outcome: ${lastOutcome.name}`);
@@ -258,7 +263,10 @@ export class Play {
               }),
             })));
 
-            const attemptOpts = act.opts;
+            const attemptOpts = { ...act.opts };
+            if (attemptOpts.ambiguityBufferMs === undefined && opts?.ambiguityBufferMs !== undefined) {
+              attemptOpts.ambiguityBufferMs = opts.ambiguityBufferMs;
+            }
 
             const incoming = lastOutcome;
             const result = await attemptAction(
