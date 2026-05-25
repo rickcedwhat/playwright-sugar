@@ -88,7 +88,7 @@ type ActRecord =
       outcomes: OutcomeSpec[];
       opts?: AttemptActionOptions;
     }
-  | { kind: 'cleanup'; fn: ActFn; skip?: ActOptions['skip'] }
+  | { kind: 'cleanup'; name?: string; fn: ActFn; skip?: ActOptions['skip'] }
   | { kind: 'reload'; opts: Parameters<Page['reload']>[0] | undefined; skip?: ActOptions['skip'] };
 
 // ── Play ──────────────────────────────────────────────────────────────────────
@@ -110,12 +110,22 @@ export class Play {
     return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
 
-  nav(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'act', name: 'nav', fn, skip: opts.skip });
+  nav(fn: ActFn, opts?: ActOptions): Play;
+  nav(name: string, fn: ActFn, opts?: ActOptions): Play;
+  nav(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
+    const name = typeof nameOrFn === 'string' ? `nav: ${nameOrFn}` : 'nav';
+    const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
+    return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
 
-  prep(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'act', name: 'prep', fn, skip: opts.skip });
+  prep(fn: ActFn, opts?: ActOptions): Play;
+  prep(name: string, fn: ActFn, opts?: ActOptions): Play;
+  prep(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
+    const name = typeof nameOrFn === 'string' ? `prep: ${nameOrFn}` : 'prep';
+    const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
+    return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
 
   reload(reloadOpts?: Parameters<Page['reload']>[0], opts: ActOptions = {}): Play {
@@ -167,8 +177,17 @@ export class Play {
     });
   }
 
-  cleanup(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'cleanup', fn, skip: opts.skip });
+  cleanup(fn: ActFn, opts?: ActOptions): Play;
+  cleanup(name: string, fn: ActFn, opts?: ActOptions): Play;
+  cleanup(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
+    const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
+    return this._append({ 
+      kind: 'cleanup', 
+      ...(typeof nameOrFn === 'string' && { name: nameOrFn }), 
+      fn, 
+      skip: opts.skip 
+    });
   }
 
   // ── Execution ────────────────────────────────────────────────────────────────
@@ -346,9 +365,9 @@ function _actLabel(act: ActRecord): string {
     case 'detect':
       return 'detect';
     case 'attempt':
-      return act.name;
+      return act.name === 'attempt' ? 'attempt' : `attempt: ${act.name}`;
     case 'cleanup':
-      return 'cleanup';
+      return act.name ? `cleanup: ${act.name}` : 'cleanup';
     case 'reload':
       return 'reload';
   }
