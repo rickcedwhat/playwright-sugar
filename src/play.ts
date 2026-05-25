@@ -11,6 +11,19 @@ import type { OutcomeSpec } from './outcomes.js';
 
 export type { AttemptActionOptions } from './attemptAction.js';
 
+/**
+ * Helper to explicitly attach a name to a function for automatic logging when
+ * using the single-argument versions of .nav(), .prep(), .cleanup(), or .attempt().
+ */
+export function namedAct<T extends Function>(name: string, fn: T): T {
+  Object.defineProperty(fn, 'actName', { value: name, enumerable: false, writable: false });
+  return fn;
+}
+
+function _getFnName(fn: Function): string | undefined {
+  return (fn as any).actName || (fn.name && fn.name !== 'anonymous' && fn.name !== '' ? fn.name : undefined);
+}
+
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export type ActOptions = {
@@ -113,8 +126,9 @@ export class Play {
   nav(fn: ActFn, opts?: ActOptions): Play;
   nav(name: string, fn: ActFn, opts?: ActOptions): Play;
   nav(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
-    const name = typeof nameOrFn === 'string' ? `nav: ${nameOrFn}` : 'nav';
     const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const providedName = typeof nameOrFn === 'string' ? nameOrFn : _getFnName(fn);
+    const name = providedName ? `nav: ${providedName}` : 'nav';
     const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
     return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
@@ -122,8 +136,9 @@ export class Play {
   prep(fn: ActFn, opts?: ActOptions): Play;
   prep(name: string, fn: ActFn, opts?: ActOptions): Play;
   prep(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
-    const name = typeof nameOrFn === 'string' ? `prep: ${nameOrFn}` : 'prep';
     const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const providedName = typeof nameOrFn === 'string' ? nameOrFn : _getFnName(fn);
+    const name = providedName ? `prep: ${providedName}` : 'prep';
     const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
     return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
@@ -167,10 +182,11 @@ export class Play {
     const action = nameOrAction as ActFn;
     const outcomes = actionOrOutcomes as OutcomeSpec[];
     const opts = outcomesOrOpts as AttemptActionOptions | undefined;
+    const actionName = _getFnName(action);
 
     return this._append({
       kind: 'attempt',
-      name: 'attempt',
+      name: actionName || 'attempt',
       action,
       outcomes,
       ...(opts !== undefined && { opts }),
@@ -181,10 +197,11 @@ export class Play {
   cleanup(name: string, fn: ActFn, opts?: ActOptions): Play;
   cleanup(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
     const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const name = typeof nameOrFn === 'string' ? nameOrFn : _getFnName(fn);
     const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
     return this._append({ 
       kind: 'cleanup', 
-      ...(typeof nameOrFn === 'string' && { name: nameOrFn }), 
+      ...(name !== undefined && { name }), 
       fn, 
       skip: opts.skip 
     });
