@@ -24,7 +24,8 @@
     "test:unit": "vitest run",
     "test:mutate": "pnpm exec stryker run",
     "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
+    "docs:dev:live": "concurrently -k -n lab,docs -c cyan,magenta \"pnpm --dir lab dev\" \"pnpm docs:dev\"",
+    "docs:build": "CI=true pnpm --dir lab install --frozen-lockfile && pnpm --dir lab run build:embed && vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
   "keywords": [],
@@ -39,6 +40,7 @@
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^3.0.4",
+    "concurrently": "^9.2.1",
     "husky": "^9.1.7",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",

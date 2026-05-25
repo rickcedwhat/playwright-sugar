@@ -4,6 +4,7 @@
  * Supported params:
  * - `clear=1` — wipe persisted datasets
  * - `seed=<name>` — append one dataset row (after optional clear)
+ * - `gotoDetail=first` — navigate to the detail view of the first row in persisted storage (used by docs demos)
  * - `view=settings` — consumed by `parseInitialRouteFromUrl` in App
  *
  * `role=viewer` is read live from the URL in `DatasetsPage` (no bootstrap needed).
@@ -35,7 +36,20 @@ type InitialRoute =
 
 export function parseInitialRouteFromUrl(): InitialRoute {
   if (typeof window === 'undefined') return { view: 'datasets' };
-  const v = new URLSearchParams(window.location.search).get('view');
+  const params = new URLSearchParams(window.location.search);
+  const v = params.get('view');
   if (v === 'settings') return { view: 'settings' };
+  const gotoDetail = params.get('gotoDetail');
+  if (gotoDetail === 'first') {
+    try {
+      const raw = localStorage.getItem('sugar-lab-datasets');
+      const parsed = raw ? JSON.parse(raw) : [];
+      const rows: { id?: string }[] = Array.isArray(parsed) ? parsed : [];
+      const firstId = typeof rows[0]?.id === 'string' ? rows[0].id : null;
+      if (firstId) return { view: 'dataset-detail', id: firstId };
+    } catch {
+      /* ignored */
+    }
+  }
   return { view: 'datasets' };
 }

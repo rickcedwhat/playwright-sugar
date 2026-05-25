@@ -64,26 +64,11 @@ describe('Outcomes DSL', () => {
     expect(outcome.isTimeoutOutcome).toBe(true);
     expect(outcome.isSuccess).toBe(false);
     expect(outcome.name).toBe('timeout');
-    expect(outcome.after).toBeUndefined();
-  });
-
-  it('timeout(after) stores after and uses default name', () => {
-    const outcome = Outcomes.timeout(5000);
-    expect(outcome.after).toBe(5000);
-    expect(outcome.name).toBe('timeout');
-    expect(outcome.isTimeoutOutcome).toBe(true);
   });
 
   it('timeout(name) uses provided name', () => {
     const outcome = Outcomes.timeout('timed-out');
     expect(outcome.name).toBe('timed-out');
-    expect(outcome.after).toBeUndefined();
-  });
-
-  it('timeout(name, after) uses both', () => {
-    const outcome = Outcomes.timeout('timed-out', 8000);
-    expect(outcome.name).toBe('timed-out');
-    expect(outcome.after).toBe(8000);
   });
 
   it('actionError() has sensible defaults', () => {

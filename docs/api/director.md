@@ -45,7 +45,7 @@ expect(result.isSuccess).toBe(false);
 director.ensureExists(
   playbook: Playbook,
   params: unknown,
-  opts?: { syncTo: Page; syncStrategy?: SyncStrategy }
+  opts?: { syncTo?: Page | Playbook; shouldReloadSync?: boolean }
 ): Promise<void>
 ```
 
@@ -60,7 +60,7 @@ await director.ensureExists(pb, { name: 'Fixture Dataset' });
 // Ensure it's also visible on a second page
 await director.ensureExists(adminPb, { name: 'Shared Dataset' }, {
   syncTo: viewerPage,
-  syncStrategy: SyncStrategy.withReload(),
+  shouldReloadSync: true,
 });
 ```
 

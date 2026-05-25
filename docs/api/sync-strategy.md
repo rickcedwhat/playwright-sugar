@@ -2,7 +2,7 @@
 
 Describes how to synchronise state to a second page after `Director.ensureExists` creates a resource. Passed as `syncStrategy` in `ensureExists` options.
 
-## SyncStrategy.default()
+## SyncStrategies.default()
 
 No-op sync. `bringToFront` is handled automatically by `Play.run()`, and the `exists` play handles its own navigation. Use this (or omit `syncStrategy`) when the second page polls or subscribes to updates automatically.
 
@@ -11,29 +11,29 @@ await director.ensureExists(adminPb, params, { syncTo: viewerPage });
 // equivalent to:
 await director.ensureExists(adminPb, params, {
   syncTo: viewerPage,
-  syncStrategy: SyncStrategy.default(),
+  syncStrategy: SyncStrategies.default(),
 });
 ```
 
-## SyncStrategy.withReload()
+## SyncStrategies.withReload()
 
 Reloads the sync target page (`waitUntil: 'domcontentloaded'`) before retrying `exists`. Use when the second page reads from localStorage or a polling endpoint that updates on page load.
 
 ```ts
 await director.ensureExists(adminPb, params, {
   syncTo: viewerPage,
-  syncStrategy: SyncStrategy.withReload(),
+  syncStrategy: SyncStrategies.withReload(),
 });
 ```
 
-## SyncStrategy.custom(fn)
+## SyncStrategies.custom(fn)
 
 User-defined sync logic.
 
 ```ts
 await director.ensureExists(adminPb, params, {
   syncTo: viewerPage,
-  syncStrategy: SyncStrategy.custom(async page => {
+  syncStrategy: SyncStrategies.custom(async page => {
     await page.evaluate(() => window.__refreshData());
     await page.waitForResponse('/api/datasets');
   }),

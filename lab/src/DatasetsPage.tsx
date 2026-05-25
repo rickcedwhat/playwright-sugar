@@ -60,6 +60,21 @@ export default function DatasetsPage({
     return () => document.removeEventListener('mousedown', close);
   }, [openMenuId]);
 
+  // Docs explorer — show viewer deny toast immediately when `demoToast=fail-create`
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('demoToast') !== 'fail-create') return;
+      if (getRole() !== 'viewer') return;
+      const flag = `sugar-demo-fail-create:${window.location.search}`;
+      if (sessionStorage.getItem(flag)) return;
+      sessionStorage.setItem(flag, '1');
+      toast.error('Failed to create dataset');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   // ── Create ────────────────────────────────────────────────────────────────
 
   function handleCreateClick() {

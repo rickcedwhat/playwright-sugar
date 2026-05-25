@@ -394,7 +394,7 @@ describe('.attempt() locator resolution', () => {
     expect(typeof capturedCtx).toBe('object');
   });
 
-  it('passes the timeout outcome .after value to attemptAction', async () => {
+  it('passes opts.timeout from attempt to attemptAction', async () => {
     const page = makePage();
     let capturedTimeout: unknown;
     mockAttemptAction.mockImplementationOnce(async (_a, _o, opts) => {
@@ -402,10 +402,11 @@ describe('.attempt() locator resolution', () => {
       return { isSuccess: true, outcome: 'ok', payload: undefined };
     });
 
-    const play = new Play().attempt(async () => {}, [
-      Outcomes.success(p => p.getByText('done')),
-      Outcomes.timeout(8000),
-    ]);
+    const play = new Play().attempt(
+      async () => {},
+      [Outcomes.success(p => p.getByText('done')), Outcomes.timeout()],
+      { timeout: 8000 }
+    );
 
     await play.run('label', { page });
 
@@ -422,7 +423,7 @@ describe('.attempt() locator resolution', () => {
 
     const play = new Play().attempt(
       async () => {},
-      [Outcomes.success(p => p.getByText('done')), Outcomes.timeout(9999)],
+      [Outcomes.success(p => p.getByText('done')), Outcomes.timeout()],
       { timeout: 12_000 }
     );
 
@@ -475,9 +476,8 @@ describe('Outcomes DSL', () => {
     expect(outcome.isSuccess).toBe(true);
   });
 
-  it('timeout(after) stores after and isTimeoutOutcome', () => {
-    const outcome = Outcomes.timeout(5000);
-    expect(outcome.after).toBe(5000);
+  it('timeout() marks isTimeoutOutcome', () => {
+    const outcome = Outcomes.timeout();
     expect(outcome.isTimeoutOutcome).toBe(true);
     expect(outcome.isSuccess).toBe(false);
   });
@@ -582,10 +582,10 @@ describe('Play logging', () => {
     logSpy.mockClear();
   });
 
-  it('logs ▶ Play: label at the start', async () => {
+  it('logs ▶ label at the start', async () => {
     const page = makePage();
     await new Play().run('MyPb > exists', { page });
-    expect(logSpy).toHaveBeenCalledWith('▶ Play: MyPb > exists');
+    expect(logSpy).toHaveBeenCalledWith('▶ MyPb > exists');
   });
 
   it('logs ✅ for a successful act', async () => {
@@ -660,23 +660,4 @@ describe('Play logging', () => {
   });
 });
 
-// ── SyncStrategy ──────────────────────────────────────────────────────────────
 
-describe('SyncStrategy', () => {
-  it('withReload() calls reload on the given page', async () => {
-    const { SyncStrategy } = await import('./syncStrategy.js');
-    const page = makePage();
-    const strategy = SyncStrategy.withReload();
-    await strategy.sync(page as unknown as Page);
-    expect(page.reload).toHaveBeenCalledWith({ waitUntil: 'domcontentloaded' });
-  });
-
-  it('custom() calls the provided fn with the page', async () => {
-    const { SyncStrategy } = await import('./syncStrategy.js');
-    const page = makePage();
-    const fn = vi.fn().mockResolvedValue(undefined);
-    const strategy = SyncStrategy.custom(fn);
-    await strategy.sync(page as unknown as Page);
-    expect(fn).toHaveBeenCalledWith(page);
-  });
-});

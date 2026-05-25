@@ -25,3 +25,4 @@ This document tracks future "Sugar" helpers and architectural improvements plann
 - **Automatic Retries for `verifiedFill`**: Enhancing `verifiedFill` to handle more complex state-reversion cases in specific frameworks.
 - **Plugin System**: Allowing users to register global "Cleaners" that run before every `attemptAction`.
 - **Custom Strategies Registry**: A global way to register and reuse scrolling/finding strategies.
+- **Assertion-level Retries**: Expand `RecheckStrategy` to `assertCan` and `assertCannot` to retry checks (e.g., verifying deletion) without playbook-level retry configuration.
