@@ -195,6 +195,9 @@ export class Play {
       let shouldSkip = false;
       if (runError) {
         shouldSkip = true;
+      } else if (lastOutcome && !lastOutcome.isSuccess) {
+        // Short-circuit: if a detect resolved to a failure state, skip subsequent acts
+        shouldSkip = true;
       } else if (act.kind !== 'attempt' && act.skip !== undefined) {
         try {
           shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
