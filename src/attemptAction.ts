@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test';
 
-export type AsyncLocatorFn = () => Locator | Promise<Locator>;
+export type AsyncLocatorFn = () => Locator | null | Promise<Locator | null>;
 
 export type Outcome = {
   name: string;

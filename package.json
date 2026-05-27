@@ -19,6 +19,7 @@
   "scripts": {
     "test": "playwright test",
     "build": "pnpm exec tsc",
+    "poc": "pnpm --dir test-replacement-poc/PoC run poc",
     "prepare": "husky",
     "prepublishOnly": "pnpm run build",
     "test:unit": "vitest run",

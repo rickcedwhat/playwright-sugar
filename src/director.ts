@@ -170,10 +170,25 @@ export class Director {
           })();
       
       console.log(`  ↻ Syncing ${targetPlaybook.runLabel('exists')}`);
-      const syncResult = await this._runPlay(targetPlaybook, 'exists', params, { 
+      let syncResult = await this._runPlay(targetPlaybook, 'exists', params, { 
         indent: 1, 
         labelSuffix: '(sync check)' 
       });
+
+      // Under the hood: if shouldReloadSync is true, automatically retry up to 2 times
+      let syncAttempts = 0;
+      while (!syncResult.isSuccess && shouldReload && syncAttempts < 2) {
+        if (targetPage) {
+          const startT = Date.now();
+          await targetPage.reload({ waitUntil: 'domcontentloaded' });
+          console.log(`    ↻  page reloaded  (${Date.now() - startT}ms)`);
+        }
+        syncResult = await this._runPlay(targetPlaybook, 'exists', params, {
+          indent: 1,
+          labelSuffix: `(sync check attempt ${syncAttempts + 2})`,
+        });
+        syncAttempts++;
+      }
 
       if (!syncResult.isSuccess) {
         throw new Error(

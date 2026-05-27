@@ -46,6 +46,8 @@ export type DetectCandidate = {
   name: string;
   isSuccess: boolean;
   locator?: Locator | AsyncLocatorFn;
+  isTimeoutOutcome?: boolean;
+  isActionErrorOutcome?: boolean;
   /**
    * When this branch wins, called with the winning locator; return value becomes the next act’s
    * third-argument `outcome.payload` (see {@link PlayOutcome}).
@@ -274,6 +276,8 @@ export class Play {
               name: c.name,
               isSuccess: c.isSuccess,
               ...(c.locator !== undefined && { locator: c.locator }),
+              ...(c.isTimeoutOutcome !== undefined && { isTimeoutOutcome: c.isTimeoutOutcome }),
+              ...(c.isActionErrorOutcome !== undefined && { isActionErrorOutcome: c.isActionErrorOutcome }),
               ...(c.onOutcome !== undefined && { onOutcome: c.onOutcome }),
             }));
             const detectParams: Parameters<typeof detectState>[0] = { outcomes };
