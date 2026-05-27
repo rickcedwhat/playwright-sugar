@@ -21,6 +21,7 @@ This document tracks future "Sugar" helpers and architectural improvements plann
 - **Goal**: A helper that waits for a specific duration of network inactivity or for specific "Busy" APIs to finish.
 
 ## 🏗️ Architectural Ideas
+- **Director-Registered Routines**: Decouple multi-play workflows (like `ensureExists`) from the Director core by registering workflows as routines. Tracked in [issue #42](https://github.com/rickcedwhat/playwright-sugar/issues/42).
 - **Global Error Handling**: Automatically capturing browser logs and screenshots ONLY on `attemptAction` failures.
 - **Automatic Retries for `verifiedFill`**: Enhancing `verifiedFill` to handle more complex state-reversion cases in specific frameworks.
 - **Plugin System**: Allowing users to register global "Cleaners" that run before every `attemptAction`.

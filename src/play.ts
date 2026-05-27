@@ -11,6 +11,19 @@ import type { OutcomeSpec } from './outcomes.js';
 
 export type { AttemptActionOptions } from './attemptAction.js';
 
+/**
+ * Helper to explicitly attach a name to a function for automatic logging when
+ * using the single-argument versions of .nav(), .prep(), .cleanup(), or .attempt().
+ */
+export function namedAct<T extends Function>(name: string, fn: T): T {
+  Object.defineProperty(fn, 'actName', { value: name, enumerable: false, writable: false });
+  return fn;
+}
+
+function _getFnName(fn: Function): string | undefined {
+  return (fn as any).actName || (fn.name && fn.name !== 'anonymous' && fn.name !== '' ? fn.name : undefined);
+}
+
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export type ActOptions = {
@@ -19,11 +32,13 @@ export type ActOptions = {
 
 export type DetectOptions = ActOptions & {
   timeout?: number;
+  ambiguityBufferMs?: number;
 };
 
 export type RunOptions = {
   indent?: number;
   labelSuffix?: string;
+  ambiguityBufferMs?: number;
 };
 
 /** One branch returned from the `.detect()` callback — forwarded to `detectState` / `attemptAction`. */
@@ -31,6 +46,8 @@ export type DetectCandidate = {
   name: string;
   isSuccess: boolean;
   locator?: Locator | AsyncLocatorFn;
+  isTimeoutOutcome?: boolean;
+  isActionErrorOutcome?: boolean;
   /**
    * When this branch wins, called with the winning locator; return value becomes the next act’s
    * third-argument `outcome.payload` (see {@link PlayOutcome}).
@@ -78,7 +95,7 @@ export type ActFn = (page: Page, ctx: PlayCtx, outcome: PlayOutcome | undefined)
 
 type ActRecord =
   | { kind: 'act'; name: string; fn: ActFn; skip?: ActOptions['skip'] }
-  | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; skip?: ActOptions['skip'] }
+  | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; ambiguityBufferMs?: number; skip?: ActOptions['skip'] }
   | {
       kind: 'attempt';
       name: string;
@@ -86,7 +103,7 @@ type ActRecord =
       outcomes: OutcomeSpec[];
       opts?: AttemptActionOptions;
     }
-  | { kind: 'cleanup'; fn: ActFn; skip?: ActOptions['skip'] }
+  | { kind: 'cleanup'; name?: string; fn: ActFn; skip?: ActOptions['skip'] }
   | { kind: 'reload'; opts: Parameters<Page['reload']>[0] | undefined; skip?: ActOptions['skip'] };
 
 // ── Play ──────────────────────────────────────────────────────────────────────
@@ -108,12 +125,24 @@ export class Play {
     return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
 
-  nav(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'act', name: 'nav', fn, skip: opts.skip });
+  nav(fn: ActFn, opts?: ActOptions): Play;
+  nav(name: string, fn: ActFn, opts?: ActOptions): Play;
+  nav(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
+    const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const providedName = typeof nameOrFn === 'string' ? nameOrFn : _getFnName(fn);
+    const name = providedName ? `nav: ${providedName}` : 'nav';
+    const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
+    return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
 
-  prep(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'act', name: 'prep', fn, skip: opts.skip });
+  prep(fn: ActFn, opts?: ActOptions): Play;
+  prep(name: string, fn: ActFn, opts?: ActOptions): Play;
+  prep(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
+    const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const providedName = typeof nameOrFn === 'string' ? nameOrFn : _getFnName(fn);
+    const name = providedName ? `prep: ${providedName}` : 'prep';
+    const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
+    return this._append({ kind: 'act', name, fn, skip: opts.skip });
   }
 
   reload(reloadOpts?: Parameters<Page['reload']>[0], opts: ActOptions = {}): Play {
@@ -125,6 +154,7 @@ export class Play {
       kind: 'detect',
       fn,
       ...(opts.timeout !== undefined && { timeout: opts.timeout }),
+      ...(opts.ambiguityBufferMs !== undefined && { ambiguityBufferMs: opts.ambiguityBufferMs }),
       skip: opts.skip,
     });
   }
@@ -154,18 +184,29 @@ export class Play {
     const action = nameOrAction as ActFn;
     const outcomes = actionOrOutcomes as OutcomeSpec[];
     const opts = outcomesOrOpts as AttemptActionOptions | undefined;
+    const actionName = _getFnName(action);
 
     return this._append({
       kind: 'attempt',
-      name: 'attempt',
+      name: actionName || 'attempt',
       action,
       outcomes,
       ...(opts !== undefined && { opts }),
     });
   }
 
-  cleanup(fn: ActFn, opts: ActOptions = {}): Play {
-    return this._append({ kind: 'cleanup', fn, skip: opts.skip });
+  cleanup(fn: ActFn, opts?: ActOptions): Play;
+  cleanup(name: string, fn: ActFn, opts?: ActOptions): Play;
+  cleanup(nameOrFn: string | ActFn, fnOrOpts?: ActFn | ActOptions, maybeOpts?: ActOptions): Play {
+    const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as ActFn;
+    const name = typeof nameOrFn === 'string' ? nameOrFn : _getFnName(fn);
+    const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as ActOptions;
+    return this._append({ 
+      kind: 'cleanup', 
+      ...(name !== undefined && { name }), 
+      fn, 
+      skip: opts.skip 
+    });
   }
 
   // ── Execution ────────────────────────────────────────────────────────────────
@@ -195,8 +236,19 @@ export class Play {
       let shouldSkip = false;
       if (runError) {
         shouldSkip = true;
+      } else if (lastOutcome && !lastOutcome.isSuccess) {
+        // Short-circuit: if a detect resolved to a failure state, skip subsequent acts
+        shouldSkip = true;
       } else if (act.kind !== 'attempt' && act.skip !== undefined) {
-        shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+        try {
+          shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+        } catch (err: unknown) {
+          const raw = err instanceof Error ? err : new Error(String(err));
+          const wrapped = new Error(`[${label} > ${actName}] skip predicate threw: ${raw.message}`, { cause: raw });
+          console.log(`${aPrefix}❌ ${actName}  skip predicate threw → ${wrapped.message}`);
+          runError = wrapped;
+          shouldSkip = true;
+        }
       }
 
       if (shouldSkip) {
@@ -224,10 +276,14 @@ export class Play {
               name: c.name,
               isSuccess: c.isSuccess,
               ...(c.locator !== undefined && { locator: c.locator }),
+              ...(c.isTimeoutOutcome !== undefined && { isTimeoutOutcome: c.isTimeoutOutcome }),
+              ...(c.isActionErrorOutcome !== undefined && { isActionErrorOutcome: c.isActionErrorOutcome }),
               ...(c.onOutcome !== undefined && { onOutcome: c.onOutcome }),
             }));
             const detectParams: Parameters<typeof detectState>[0] = { outcomes };
             if (act.timeout !== undefined) detectParams.timeout = act.timeout;
+            if (act.ambiguityBufferMs !== undefined) detectParams.ambiguityBufferMs = act.ambiguityBufferMs;
+            else if (opts?.ambiguityBufferMs !== undefined) detectParams.ambiguityBufferMs = opts.ambiguityBufferMs;
             const detectResult = await detectState(detectParams);
             lastOutcome = outcomeFromResolution(detectResult);
             console.log(`${aPrefix}✅ ${actName}  (${Date.now() - t}ms) → outcome: ${lastOutcome.name}`);
@@ -247,7 +303,10 @@ export class Play {
               }),
             })));
 
-            const attemptOpts = act.opts;
+            const attemptOpts = { ...act.opts };
+            if (attemptOpts.ambiguityBufferMs === undefined && opts?.ambiguityBufferMs !== undefined) {
+              attemptOpts.ambiguityBufferMs = opts.ambiguityBufferMs;
+            }
 
             const incoming = lastOutcome;
             const result = await attemptAction(
@@ -279,7 +338,16 @@ export class Play {
       for (const act of cleanupActs) {
         if (act.kind !== 'cleanup') continue;
 
-        const shouldSkipCleanup = typeof act.skip === 'function' ? await act.skip(ctx, lastOutcome) : act.skip;
+        let shouldSkipCleanup: boolean | undefined;
+        try {
+          shouldSkipCleanup = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+        } catch (err: unknown) {
+          const raw = err instanceof Error ? err : new Error(String(err));
+          const wrapped = new Error(`[${label} > cleanup] skip predicate threw: ${raw.message}`, { cause: raw });
+          console.log(`${aPrefix}❌ cleanup  skip predicate threw → ${wrapped.message}`);
+          if (!runError) runError = wrapped;
+          continue;
+        }
         if (shouldSkipCleanup) {
           console.log(`${aPrefix}⏭  cleanup  SKIPPED`);
           continue;
@@ -318,9 +386,9 @@ function _actLabel(act: ActRecord): string {
     case 'detect':
       return 'detect';
     case 'attempt':
-      return act.name;
+      return act.name === 'attempt' ? 'attempt' : `attempt: ${act.name}`;
     case 'cleanup':
-      return 'cleanup';
+      return act.name ? `cleanup: ${act.name}` : 'cleanup';
     case 'reload':
       return 'reload';
   }

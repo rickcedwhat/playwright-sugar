@@ -259,7 +259,7 @@ function goNextManual(): void {
 }
 
 const picksSummary = computed(() => {
-  const bits: { k: string; v: string }[] = [
+  const bits: { k: string; v: string | null }[] = [
     { k: 'Role', v: role.value },
     { k: 'Detect', v: detect.value },
     { k: 'Outcome rehearsal', v: outcome.value },

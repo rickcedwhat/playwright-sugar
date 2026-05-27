@@ -10,7 +10,25 @@ new Play()
 
 ## Step builders
 
-All builders except `.attempt()` accept an optional `ActOptions` as their last argument: `{ skip?: boolean }`.
+All builders except `.attempt()` accept an optional `ActOptions` as their last argument:
+
+```ts
+type ActOptions = {
+  skip?: boolean | ((ctx: PlayCtx, lastOutcome?: PlayOutcome) => boolean);
+};
+```
+
+Pass a plain boolean to skip statically, or a predicate to decide at runtime based on context or the previous act's outcome:
+
+```ts
+// Static skip
+new Play().nav(async page => { /* ... */ }, { skip: !shouldNavigate })
+
+// Predicate skip — skip the cleanup revert if we know the attempt already failed
+new Play().cleanup(async (page, _ctx, outcome) => {
+  // revert logic
+}, { skip: (_ctx, lastOutcome) => lastOutcome?.isSuccess !== true })
+```
 
 ### .nav(fn, opts?)
 
