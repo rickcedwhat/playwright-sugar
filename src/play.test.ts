@@ -347,7 +347,7 @@ describe('error labels', () => {
     const play = new Play().attempt('submit', async () => {}, [Outcomes.success(mockLocator)]);
 
     await expect(play.run('Pb > play', { page }))
-      .rejects.toThrow('[Pb > play > submit]');
+      .rejects.toThrow('[Pb > play > attempt: submit]');
   });
 });
 

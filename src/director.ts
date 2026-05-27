@@ -7,11 +7,19 @@ export type RecheckStrategy = {
 };
 
 export type DirectorConfig = {
+  collect?: boolean;
   ensureExists?: {
     recheckBeforeCreate?: RecheckStrategy;
     shouldReloadSync?: boolean; // Default behavior when syncTo is provided
   };
   ambiguityBufferMs?: number;
+};
+
+type CollectedResult = {
+  play: string;
+  expected: 'success' | 'failure';
+  outcome: string;
+  pass: boolean;
 };
 
 export type EnsureExistsOptions = {
@@ -30,7 +38,12 @@ export type PlayResult = {
 
 
 export class Director {
-  constructor(private config?: DirectorConfig) {}
+  private readonly _mode: 'fail-fast' | 'collect';
+  private readonly _collected: CollectedResult[] = [];
+
+  constructor(private config?: DirectorConfig) {
+    this._mode = config?.collect ? 'collect' : 'fail-fast';
+  }
 
   /**
    * Runs a play and asserts that it resulted in a **success** outcome.
@@ -44,6 +57,22 @@ export class Director {
     const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Assert:${scopeStr} can ${playName} ${playbook.name}`);
+
+    if (this._mode === 'collect') {
+      let result: PlayResult;
+      try {
+        result = await this._runPlay(playbook, playName, params, { indent: 1 });
+      } catch (e) {
+        const outcome = e instanceof Error ? e.message : String(e);
+        this._collected.push({ play: playName, expected: 'success', outcome, pass: false });
+        console.log('');
+        return { isSuccess: false, outcome };
+      }
+      this._collected.push({ play: playName, expected: 'success', outcome: result.outcome, pass: result.isSuccess });
+      console.log('');
+      return result;
+    }
+
     const result = await this._runPlay(playbook, playName, params, { indent: 1 });
     console.log('');
     if (!result.isSuccess) {
@@ -66,6 +95,22 @@ export class Director {
     const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Assert:${scopeStr} cannot ${playName} ${playbook.name}`);
+
+    if (this._mode === 'collect') {
+      let result: PlayResult;
+      try {
+        result = await this._runPlay(playbook, playName, params, { indent: 1 });
+      } catch (e) {
+        const outcome = e instanceof Error ? e.message : String(e);
+        this._collected.push({ play: playName, expected: 'failure', outcome, pass: false });
+        console.log('');
+        return { isSuccess: false, outcome };
+      }
+      this._collected.push({ play: playName, expected: 'failure', outcome: result.outcome, pass: !result.isSuccess });
+      console.log('');
+      return result;
+    }
+
     const result = await this._runPlay(playbook, playName, params, { indent: 1 });
     console.log('');
     if (result.isSuccess) {
@@ -74,6 +119,31 @@ export class Director {
       );
     }
     return result;
+  }
+
+  /**
+   * In collect mode: logs a results table and throws if any checks failed.
+   * No-op in fail-fast mode (errors already threw at the call site).
+   */
+  async review(): Promise<void> {
+    if (this._collected.length === 0) return;
+
+    console.table(
+      this._collected.map(r => ({
+        Play: r.play,
+        Expected: r.expected,
+        Outcome: r.outcome,
+        Status: r.pass ? '✅ PASS' : '❌ FAIL',
+      }))
+    );
+
+    const failures = this._collected.filter(r => !r.pass);
+    if (failures.length === 0) return;
+
+    const lines = failures
+      .map(r => `  ❌ ${r.play} — expected ${r.expected}, got "${r.outcome}"`)
+      .join('\n');
+    throw new Error(`Director.review(): ${failures.length} of ${this._collected.length} checks failed\n\n${lines}`);
   }
 
   /**
