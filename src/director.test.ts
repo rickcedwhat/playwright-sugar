@@ -34,8 +34,6 @@ const mockPlaybook = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'table').mockImplementation(() => {});
 });
 
 // ── assertCan — collect mode ──────────────────────────────────────────────────
@@ -93,6 +91,13 @@ describe('assertCannot — collect mode', () => {
     stubRun(d, { isSuccess: false, outcome: 'blocked' });
     await d.assertCannot(mockPlaybook, 'deleteUser');
     expect((d as any)._collected[0]).toMatchObject({ expected: 'failure', pass: true });
+  });
+
+  it('records a failure and does not throw when _runPlay throws', async () => {
+    const d = makeDirector();
+    stubRunError(d, 'Playwright timeout');
+    await expect(d.assertCannot(mockPlaybook, 'deleteUser')).resolves.not.toThrow();
+    expect((d as any)._collected[0]).toMatchObject({ expected: 'failure', pass: false, outcome: 'Playwright timeout' });
   });
 });
 

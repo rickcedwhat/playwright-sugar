@@ -340,7 +340,7 @@ export class Play {
 
         let shouldSkipCleanup: boolean | undefined;
         try {
-          shouldSkipCleanup = typeof act.skip === 'function' ? await act.skip(ctx, lastOutcome) : act.skip;
+          shouldSkipCleanup = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
         } catch (err: unknown) {
           const raw = err instanceof Error ? err : new Error(String(err));
           const wrapped = new Error(`[${label} > cleanup] skip predicate threw: ${raw.message}`, { cause: raw });
