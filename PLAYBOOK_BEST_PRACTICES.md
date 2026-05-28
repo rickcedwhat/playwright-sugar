@@ -103,6 +103,8 @@ When an element is located in a `.detect()` step and is immediately needed in th
 > For non-adjacent steps (like `.cleanup()`), the community is still actively deciding on the best pattern for sharing locators (e.g. storing them in the mutable context `ctx`, re-querying them locally, or developing future library enhancements to support this). Until a standard is finalized, prioritize either re-querying the locator locally or carefully using `ctx` where needed.
 
 ```typescript
+import type { Locator } from '@playwright/test';
+
 // GOOD (Adjacent Step Sharing)
 .detect((page) => [
   { name: 'found', isSuccess: true, locator: page.getByRole('textbox', { name: 'Name' }) }

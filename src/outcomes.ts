@@ -52,6 +52,28 @@ function failureOutcome(
   };
 }
 
+/**
+ * Creates a timeout outcome specification.
+ *
+ * By default, calling `Outcomes.timeout(name)` (via the `timeoutOutcome` factory mapping to `Outcomes.timeout` DSL entry)
+ * marks `isSuccess: false` and represents a failure condition where a wait or locator action timed out.
+ *
+ * However, calling `Outcomes.timeout(name, { isSuccess: true })` overrides this behavior, marking `isSuccess: true`.
+ * This changes control flow by designating the timeout as a successful outcome. This is useful when expecting a state
+ * *not* to occur or when a timeout is the desired target outcome (e.g. verifying a modal remains closed).
+ * This success-override allows subsequent success-branching in Play's execution, satisfies the Director's assertion
+ * checks (e.g., `assertCan`), and avoids triggering retry/error recovery cycles or cleanups that consume `isSuccess`
+ * and `isTimeoutOutcome`.
+ *
+ * @example
+ * // Default: timeout is treated as a failure
+ * Outcomes.timeout('spinner-stuck')
+ * // => { name: 'spinner-stuck', isSuccess: false, isTimeoutOutcome: true }
+ *
+ * // Override: timeout is treated as a success
+ * Outcomes.timeout('modal-never-appeared', { isSuccess: true })
+ * // => { name: 'modal-never-appeared', isSuccess: true, isTimeoutOutcome: true }
+ */
 function timeoutOutcome(name?: string, opts?: { isSuccess?: boolean }): OutcomeSpec {
   return {
     name: name ?? 'timeout',

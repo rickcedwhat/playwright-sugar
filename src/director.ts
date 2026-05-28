@@ -63,6 +63,8 @@ export class Director {
     playName: K,
     ...args: Parameters<P[K]> extends [infer Param] ? [Param] : []
   ): Promise<PlayResult> {
+    const isDebug = this._debugNext;
+    this._debugNext = false;
     const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Assert:${scopeStr} can ${playName} ${playbook.name}`);
@@ -71,7 +73,7 @@ export class Director {
       let result: PlayResult;
       const playbookLabel = playbook.runLabel('');
       try {
-        result = await this._runPlay(playbook, playName, params, { indent: 1 });
+        result = await this._runPlay(playbook, playName, params, { indent: 1, debug: isDebug });
       } catch (e) {
         const outcome = e instanceof Error ? e.message : String(e);
         this._collected.push({ playbook: playbookLabel, play: playName, expected: 'success', outcome, pass: false });
@@ -83,7 +85,7 @@ export class Director {
       return result;
     }
 
-    const result = await this._runPlay(playbook, playName, params, { indent: 1 });
+    const result = await this._runPlay(playbook, playName, params, { indent: 1, debug: isDebug });
     console.log('');
     if (!result.isSuccess) {
       throw new Error(
@@ -102,6 +104,8 @@ export class Director {
     playName: K,
     ...args: Parameters<P[K]> extends [infer Param] ? [Param] : []
   ): Promise<PlayResult> {
+    const isDebug = this._debugNext;
+    this._debugNext = false;
     const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Assert:${scopeStr} cannot ${playName} ${playbook.name}`);
@@ -110,7 +114,7 @@ export class Director {
       let result: PlayResult;
       const playbookLabel = playbook.runLabel('');
       try {
-        result = await this._runPlay(playbook, playName, params, { indent: 1 });
+        result = await this._runPlay(playbook, playName, params, { indent: 1, debug: isDebug });
       } catch (e) {
         const outcome = e instanceof Error ? e.message : String(e);
         this._collected.push({ playbook: playbookLabel, play: playName, expected: 'failure', outcome, pass: false });
@@ -122,7 +126,7 @@ export class Director {
       return result;
     }
 
-    const result = await this._runPlay(playbook, playName, params, { indent: 1 });
+    const result = await this._runPlay(playbook, playName, params, { indent: 1, debug: isDebug });
     console.log('');
     if (result.isSuccess) {
       throw new Error(
@@ -165,10 +169,12 @@ export class Director {
     playName: K,
     ...args: Parameters<P[K]> extends [infer Param] ? [Param] : []
   ): Promise<PlayResult> {
+    const isDebug = this._debugNext;
+    this._debugNext = false;
     const params = args[0] as unknown;
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Run:${scopeStr} ${playName} ${playbook.name}`);
-    const result = await this._runPlay(playbook, playName, params, { indent: 1 });
+    const result = await this._runPlay(playbook, playName, params, { indent: 1, debug: isDebug });
     console.log('');
     return result;
   }
@@ -185,6 +191,8 @@ export class Director {
     playbook: Playbook<P>,
     ...args: Parameters<P['exists']> extends [infer Param] ? [Param, EnsureExistsOptions?] : [EnsureExistsOptions?]
   ): Promise<void> {
+    const isDebug = this._debugNext;
+    this._debugNext = false;
     const isOptions = (arg: unknown): arg is EnsureExistsOptions => 
       arg !== null && typeof arg === 'object' && ('syncTo' in arg || 'shouldReloadSync' in arg || 'recheckBeforeCreate' in arg);
     
@@ -201,7 +209,7 @@ export class Director {
     const scopeStr = playbook.logScope() ? ` ${playbook.logScope()}` : '';
     console.log(`Ensure:${scopeStr} ${playbook.name} exists`);
 
-    let existsResult = await this._runPlay(playbook, 'exists', params, { indent: 1 });
+    let existsResult = await this._runPlay(playbook, 'exists', params, { indent: 1, debug: isDebug });
 
     const recheckConfig = opts?.recheckBeforeCreate ?? this.config?.ensureExists?.recheckBeforeCreate;
     let attempts = 0;
@@ -215,13 +223,14 @@ export class Director {
       }
       existsResult = await this._runPlay(playbook, 'exists', params, { 
         indent: 1, 
-        labelSuffix: `(attempt ${attempts + 2})` 
+        labelSuffix: `(attempt ${attempts + 2})`,
+        debug: isDebug
       });
       attempts++;
     }
 
     if (!existsResult.isSuccess) {
-      const createResult = await this._runPlay(playbook, 'create', params, { indent: 1 });
+      const createResult = await this._runPlay(playbook, 'create', params, { indent: 1, debug: isDebug });
       if (!createResult.isSuccess) {
         throw new Error(
           `[${playbook.runLabel('create')}] ensureExists: create play did not succeed (outcome: "${createResult.outcome}")`
@@ -252,7 +261,8 @@ export class Director {
       console.log(`  ↻ Syncing ${targetPlaybook.runLabel('exists')}`);
       let syncResult = await this._runPlay(targetPlaybook, 'exists', params, { 
         indent: 1, 
-        labelSuffix: '(sync check)' 
+        labelSuffix: '(sync check)',
+        debug: isDebug
       });
 
       // Under the hood: if shouldReloadSync is true, automatically retry up to 2 times
@@ -266,6 +276,7 @@ export class Director {
         syncResult = await this._runPlay(targetPlaybook, 'exists', params, {
           indent: 1,
           labelSuffix: `(sync check attempt ${syncAttempts + 2})`,
+          debug: isDebug
         });
         syncAttempts++;
       }
@@ -286,7 +297,7 @@ export class Director {
     playbook: Playbook,
     playName: string,
     params: unknown,
-    opts?: { indent?: number; labelSuffix?: string }
+    opts?: { indent?: number; labelSuffix?: string; debug?: boolean }
   ): Promise<PlayResult> {
     const factory = playbook.getPlay(playName);
     const play = factory(params);
@@ -297,8 +308,7 @@ export class Director {
     if (this.config?.ambiguityBufferMs !== undefined) {
       runOpts.ambiguityBufferMs = this.config.ambiguityBufferMs;
     }
-    if (this.config?.debug || this._debugNext) runOpts.debug = true;
-    this._debugNext = false;
+    if (this.config?.debug || opts?.debug) runOpts.debug = true;
     const { lastOutcome } = await play.run(label, ctx, runOpts);
 
     if (lastOutcome) {
