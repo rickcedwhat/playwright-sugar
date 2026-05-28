@@ -39,6 +39,12 @@ export type RunOptions = {
   indent?: number;
   labelSuffix?: string;
   ambiguityBufferMs?: number;
+  /**
+   * When true, enables "debug run" behavior.
+   * This pauses execution (using Playwright's `page.pause()`) before executing each main act,
+   * allowing for inspection, stepping through, or manual action to proceed.
+   */
+  debug?: boolean;
 };
 
 /** One branch returned from the `.detect()` callback — forwarded to `detectState` / `attemptAction`. */
@@ -211,6 +217,13 @@ export class Play {
 
   // ── Execution ────────────────────────────────────────────────────────────────
 
+  /**
+   * Executes the play's step sequence (main acts followed by cleanups).
+   *
+   * @param label A label representing the play run (e.g. for logging).
+   * @param ctx The mutable context passed across steps.
+   * @param opts Run options, including `RunOptions.debug` to pause before main acts.
+   */
   async run(label: string, ctx: PlayCtx, opts?: RunOptions): Promise<PlayRunResult> {
     const page = ctx['page'] as Page;
     if (!page) throw new Error(`[${label}] No page in PlayCtx — bind one via Playbook.withCtx({ page }) or .withCtx(name, { page })`);
@@ -255,6 +268,8 @@ export class Play {
         console.log(`${aPrefix}⏭  ${actName}  SKIPPED`);
         continue;
       }
+
+      if (opts?.debug) await page.pause();
 
       const t = Date.now();
 

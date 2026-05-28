@@ -71,6 +71,13 @@ describe('Outcomes DSL', () => {
     expect(outcome.name).toBe('timed-out');
   });
 
+  it('timeout(name, { isSuccess: true }) produces a success timeout', () => {
+    const outcome = Outcomes.timeout('updated', { isSuccess: true });
+    expect(outcome.isTimeoutOutcome).toBe(true);
+    expect(outcome.isSuccess).toBe(true);
+    expect(outcome.name).toBe('updated');
+  });
+
   it('actionError() has sensible defaults', () => {
     const outcome = Outcomes.actionError();
     expect(outcome.isActionErrorOutcome).toBe(true);
