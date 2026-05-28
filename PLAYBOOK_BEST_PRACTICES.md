@@ -22,10 +22,10 @@ The `.nav()` step should be strictly dedicated to navigating to the required sec
 
 ---
 
-## 2. Limit `.detect()` to True Branching
-Only use `.detect()` when there is branching logic—i.e., when there are two or more valid expected states that require different actions (such as `alreadySelected` vs `notSelected`).
+## 2. Limit `.detect()` and `.attempt()` to True Branching
+Only use `.detect()` and `.attempt()` when there is branching logic—i.e., when there are two or more valid expected states or outcomes that require different assertions or paths (such as `success` vs `backendRejected`).
 
-If the page state is guaranteed or expected to be in a single configuration after navigation, skip `.detect()` entirely and query the element directly in the next `.prep()` or `.attempt()` step.
+If only one outcome is expected or you do not need to branch the test outcome logic, avoid unnecessary `.detect()` steps and intermediate assertions.
 
 ```typescript
 // GOOD - Expect only one state, query directly in prep
@@ -50,7 +50,42 @@ If the page state is guaranteed or expected to be in a single configuration afte
 
 ---
 
-## 3. Override Destination URLs with `expectedUrl`
+## 3. Keep `.attempt()` Focused and Minimal
+The `.attempt()` callback should execute as little as possible—ideally just a single final action (like clicking the "Save" or "Delete" button). Any preceding setup (like filling out forms, checking boxes, or typing input) should be performed beforehand inside `.prep()`.
+
+```typescript
+// GOOD
+.prep('fill details', async (page) => {
+  await page.getByPlaceholder('Name').fill(name);
+})
+.attempt(
+  'save',
+  async (page) => {
+    await page.getByRole('button', { name: 'Save' }).click();
+  },
+  [
+    Outcomes.success(page => page.getByText('Saved successfully')),
+    Outcomes.failure(page => page.getByText('Failed to save')),
+  ]
+)
+
+// BAD
+.attempt(
+  'save',
+  async (page) => {
+    await page.getByPlaceholder('Name').fill(name); // Input entry should be in prep
+    await page.getByRole('button', { name: 'Save' }).click();
+  },
+  [
+    Outcomes.success(page => page.getByText('Saved successfully')),
+    Outcomes.failure(page => page.getByText('Failed to save')),
+  ]
+)
+```
+
+---
+
+## 4. Override Destination URLs with `expectedUrl`
 When a sidebar button or link redirects to a sub-route (e.g., clicking a link with href `/configuration` immediately redirects to `/configuration/general`), provide the `expectedUrl` option to `clickTab`.
 
 This prevents `clickTab` from timing out or incorrectly resolving whether the page is already on the target tab:
@@ -61,31 +96,27 @@ await clickTab(page, 'Settings', { expectedUrl: 'configuration/general' });
 
 ---
 
-## 4. Share Locators using Context (`ctx`)
-If you locate an element during `.detect()` or `.prep()` that needs to be referenced or cleaned up later, store it in the mutable `ctx` object. This avoids duplicating selector logic and prevents race conditions if the UI structure changes during the play execution.
+## 5. Share Locators using the Step Outcomes
+When an element is located in a `.detect()` step and is immediately needed in the subsequent `.prep()`, `.attempt()`, or `.act()` step, retrieve it via the third parameter of the callback (`lastOutcome.locator`) instead of re-querying it.
+
+For non-adjacent steps (like `.cleanup()`), simply re-query the locator locally rather than storing it in the global context (`ctx`).
 
 ```typescript
 // GOOD
-.prep('fill project name', async (page, ctx) => {
-  const inputField = page.getByRole('textbox', { name: 'Project name' });
-  ctx['inputField'] = inputField; // Save to context
-  await inputField.fill(newName);
-})
-.cleanup('revert project name', async (page, ctx, afterAttempt) => {
-  if (afterAttempt?.name === 'updated') {
-    const inputField = ctx['inputField'] as Locator;
-    if (inputField) {
-      await inputField.clear();
-      await inputField.fill(originalName);
-      await page.getByRole('button', { name: 'Save' }).click();
-    }
+.detect((page) => [
+  { name: 'found', isSuccess: true, locator: page.getByRole('textbox', { name: 'Name' }) }
+])
+.prep('interact with textbox', async (page, ctx, lastOutcome) => {
+  if (lastOutcome?.name === 'found') {
+    const input = lastOutcome.locator as Locator;
+    await input.fill('value');
   }
 })
 ```
 
 ---
 
-## 5. Clean Up After State Mutation
+## 6. Clean Up After State Mutation
 Every play that mutates state (such as updating, deleting, or failing to create due to permission blocks) should implement a `.cleanup()` step. This ensures that:
 - Cleanups are executed even if the test fails or times out.
 - The project is left in a clean, stateless condition for subsequent test suites.
