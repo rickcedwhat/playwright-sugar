@@ -99,10 +99,11 @@ await clickTab(page, 'Settings', { expectedUrl: 'configuration/general' });
 ## 5. Share Locators using the Step Outcomes
 When an element is located in a `.detect()` step and is immediately needed in the subsequent `.prep()`, `.attempt()`, or `.act()` step, retrieve it via the third parameter of the callback (`lastOutcome.locator`) instead of re-querying it.
 
-For non-adjacent steps (like `.cleanup()`), simply re-query the locator locally rather than storing it in the global context (`ctx`).
+> [!NOTE]
+> For non-adjacent steps (like `.cleanup()`), the community is still actively deciding on the best pattern for sharing locators (e.g. storing them in the mutable context `ctx`, re-querying them locally, or developing future library enhancements to support this). Until a standard is finalized, prioritize either re-querying the locator locally or carefully using `ctx` where needed.
 
 ```typescript
-// GOOD
+// GOOD (Adjacent Step Sharing)
 .detect((page) => [
   { name: 'found', isSuccess: true, locator: page.getByRole('textbox', { name: 'Name' }) }
 ])
