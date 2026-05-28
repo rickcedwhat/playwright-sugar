@@ -52,10 +52,10 @@ function failureOutcome(
   };
 }
 
-function timeoutOutcome(name?: string): OutcomeSpec {
+function timeoutOutcome(name?: string, opts?: { isSuccess?: boolean }): OutcomeSpec {
   return {
     name: name ?? 'timeout',
-    isSuccess: false,
+    isSuccess: opts?.isSuccess ?? false,
     isTimeoutOutcome: true,
   };
 }

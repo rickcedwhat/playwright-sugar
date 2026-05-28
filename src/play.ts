@@ -39,6 +39,7 @@ export type RunOptions = {
   indent?: number;
   labelSuffix?: string;
   ambiguityBufferMs?: number;
+  debug?: boolean;
 };
 
 /** One branch returned from the `.detect()` callback — forwarded to `detectState` / `attemptAction`. */
@@ -255,6 +256,8 @@ export class Play {
         console.log(`${aPrefix}⏭  ${actName}  SKIPPED`);
         continue;
       }
+
+      if (opts?.debug) await page.pause();
 
       const t = Date.now();
 

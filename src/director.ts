@@ -8,6 +8,7 @@ export type RecheckStrategy = {
 
 export type DirectorConfig = {
   collect?: boolean;
+  debug?: boolean;
   ensureExists?: {
     recheckBeforeCreate?: RecheckStrategy;
     shouldReloadSync?: boolean; // Default behavior when syncTo is provided
@@ -16,6 +17,7 @@ export type DirectorConfig = {
 };
 
 type CollectedResult = {
+  playbook: string;
   play: string;
   expected: 'success' | 'failure';
   outcome: string;
@@ -40,9 +42,16 @@ export type PlayResult = {
 export class Director {
   private readonly _mode: 'fail-fast' | 'collect';
   private readonly _collected: CollectedResult[] = [];
+  private _debugNext = false;
 
   constructor(private config?: DirectorConfig) {
     this._mode = config?.collect ? 'collect' : 'fail-fast';
+  }
+
+  /** Enables Playwright Inspector step-through for the next call only. Chainable. */
+  debug(): this {
+    this._debugNext = true;
+    return this;
   }
 
   /**
@@ -60,15 +69,16 @@ export class Director {
 
     if (this._mode === 'collect') {
       let result: PlayResult;
+      const playbookLabel = playbook.runLabel('');
       try {
         result = await this._runPlay(playbook, playName, params, { indent: 1 });
       } catch (e) {
         const outcome = e instanceof Error ? e.message : String(e);
-        this._collected.push({ play: playName, expected: 'success', outcome, pass: false });
+        this._collected.push({ playbook: playbookLabel, play: playName, expected: 'success', outcome, pass: false });
         console.log('');
         return { isSuccess: false, outcome };
       }
-      this._collected.push({ play: playName, expected: 'success', outcome: result.outcome, pass: result.isSuccess });
+      this._collected.push({ playbook: playbookLabel, play: playName, expected: 'success', outcome: result.outcome, pass: result.isSuccess });
       console.log('');
       return result;
     }
@@ -98,15 +108,16 @@ export class Director {
 
     if (this._mode === 'collect') {
       let result: PlayResult;
+      const playbookLabel = playbook.runLabel('');
       try {
         result = await this._runPlay(playbook, playName, params, { indent: 1 });
       } catch (e) {
         const outcome = e instanceof Error ? e.message : String(e);
-        this._collected.push({ play: playName, expected: 'failure', outcome, pass: false });
+        this._collected.push({ playbook: playbookLabel, play: playName, expected: 'failure', outcome, pass: false });
         console.log('');
         return { isSuccess: false, outcome };
       }
-      this._collected.push({ play: playName, expected: 'failure', outcome: result.outcome, pass: !result.isSuccess });
+      this._collected.push({ playbook: playbookLabel, play: playName, expected: 'failure', outcome: result.outcome, pass: !result.isSuccess });
       console.log('');
       return result;
     }
@@ -139,9 +150,8 @@ export class Director {
 
     const failures = this._collected.filter(r => !r.pass);
     if (failures.length === 0) return;
-
     const lines = failures
-      .map(r => `  ❌ ${r.play} — expected ${r.expected}, got "${r.outcome}"`)
+      .map(r => `  ❌ ${r.playbook} > ${r.play} (expected ${r.expected}, got: "${r.outcome.split('\n')[0]}")`)
       .join('\n');
     throw new Error(`Director.review(): ${failures.length} of ${this._collected.length} checks failed\n\n${lines}`);
   }
@@ -287,6 +297,8 @@ export class Director {
     if (this.config?.ambiguityBufferMs !== undefined) {
       runOpts.ambiguityBufferMs = this.config.ambiguityBufferMs;
     }
+    if (this.config?.debug || this._debugNext) runOpts.debug = true;
+    this._debugNext = false;
     const { lastOutcome } = await play.run(label, ctx, runOpts);
 
     if (lastOutcome) {
