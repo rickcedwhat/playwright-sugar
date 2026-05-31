@@ -409,18 +409,68 @@ function PlaybookBuilderContent() {
     setNodes((nds) =>
       nds.map((n) => {
         if (n.id === id) {
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              ...updatedFields,
-            },
-          };
+          return { ...n, data: { ...n.data, ...updatedFields } };
         }
         return n;
       })
     );
-  }, [setNodes]);
+    setSelectedNode((prev) => {
+      if (prev?.id === id) {
+        return { ...prev, data: { ...prev.data, ...updatedFields } };
+      }
+      return prev;
+    });
+  }, [setNodes, setSelectedNode]);
+
+  const handleInsertNode = useCallback((type: string) => {
+    let name = '';
+    let initialData: NodeData = { label: type, name: '' };
+    switch (type) {
+      case 'nav':
+        name = 'Navigate to page';
+        initialData = { label: 'Navigation', name, code: "await clickTab(page, 'Datasets');" };
+        break;
+      case 'detect':
+        name = 'Check state';
+        initialData = {
+          label: 'State Detection', name,
+          candidates: [
+            { name: 'tableState', isSuccess: true, selector: '[data-component="TableHeadersComponent"]' },
+            { name: 'emptyState', isSuccess: false, selector: 'page.getByText("No datasets")' },
+          ],
+          timeout: 5000,
+        };
+        break;
+      case 'attempt':
+        name = 'Perform action';
+        initialData = {
+          label: 'Action Attempt', name,
+          code: "await page.getByRole('button', { name: 'Save' }).click();",
+          outcomes: [
+            { name: 'success', type: 'success', selector: 'page.getByText("Saved successfully")' },
+            { name: 'failed', type: 'failure', selector: 'page.getByText("Could not save")' },
+            { name: 'timeout', type: 'timeout', selector: '' },
+          ],
+          timeout: 5000,
+        };
+        break;
+      case 'prep':
+        name = 'Prepare action';
+        initialData = { label: 'Preparation', name, kind: 'prep', code: "if (lastOutcome?.name === 'tableState') {\n  // Do something...\n}" };
+        break;
+      case 'cleanup':
+        name = 'Revert changes';
+        initialData = { label: 'Cleanup', name, code: "if (lastOutcome?.isSuccess) {\n  // Revert changes...\n}" };
+        break;
+    }
+    const newNode: Node<NodeData> = {
+      id: `${type}_${Date.now()}`,
+      type,
+      position: { x: 250, y: 100 + nodes.length * 180 },
+      data: initialData,
+    };
+    setNodes((nds) => nds.concat(newNode));
+  }, [nodes.length, setNodes]);
 
   const handleClearCanvas = () => {
     if (window.confirm('Are you sure you want to clear the canvas?')) {
@@ -520,10 +570,13 @@ function PlaybookBuilderContent() {
             <input
               type="text"
               value={playName}
-              onChange={(e) => {
-                setPlayName(e.target.value);
+              onChange={(e) => setPlayName(e.target.value)}
+              onBlur={(e) => {
                 setActivePlayName(e.target.value);
                 localStorage.setItem(KEY_ACTIVE_PLAY, e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
               }}
               style={{ border: '1px solid #d1d5db', borderRadius: '6px', padding: '6px 10px', fontSize: '13px', width: '120px', outline: 'none' }}
             />
@@ -583,7 +636,7 @@ function PlaybookBuilderContent() {
       {/* Main Workspace */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
         {/* Left Palette */}
-        <NodePalette />
+        <NodePalette onInsert={handleInsertNode} />
 
         {/* Center Canvas */}
         <BuilderCanvas

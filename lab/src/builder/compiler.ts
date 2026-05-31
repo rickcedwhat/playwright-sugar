@@ -101,22 +101,20 @@ export function getAutoSkipPredicate(
       if (parentNode) {
         const detectStepName = parentNode.data.name;
         if (detectStepName) {
-          skipConditions.push(`history.steps.${detectStepName}?.name !== '${candidateName}'`);
+          skipConditions.push(`history.steps[${JSON.stringify(detectStepName)}]?.name !== ${JSON.stringify(candidateName)}`);
         } else {
-          skipConditions.push(`history.lastOutcome?.name !== '${candidateName}'`);
+          skipConditions.push(`history.lastOutcome?.name !== ${JSON.stringify(candidateName)}`);
         }
       }
     } else if (e.sourceHandle && e.sourceHandle.startsWith('candidate-')) {
       const candidateName = e.sourceHandle.replace('candidate-', '');
       const sourceNode = nodes.find(n => n.id === e.source);
       if (sourceNode) {
-        // If the source detect node has a custom step name, reference that step in history.
-        // Otherwise, reference history.lastOutcome.
         const detectStepName = sourceNode.data.name;
         if (detectStepName) {
-          skipConditions.push(`history.steps.${detectStepName}?.name !== '${candidateName}'`);
+          skipConditions.push(`history.steps[${JSON.stringify(detectStepName)}]?.name !== ${JSON.stringify(candidateName)}`);
         } else {
-          skipConditions.push(`history.lastOutcome?.name !== '${candidateName}'`);
+          skipConditions.push(`history.lastOutcome?.name !== ${JSON.stringify(candidateName)}`);
         }
       }
     }
@@ -128,6 +126,11 @@ export function getAutoSkipPredicate(
   }
 
   return null;
+}
+
+function toSafeIdentifier(str: string): string {
+  const s = str.replace(/[^a-zA-Z0-9$_]/g, '_');
+  return /^\d/.test(s) ? `_${s}` : s || '_';
 }
 
 /**
@@ -142,8 +145,8 @@ export function compilePlaybook(
   const sequential = getSequentialNodes(nodes, edges);
   let code = `import { Play, Playbook, Outcomes } from '@rickcedwhat/playwright-sugar';\n`;
   code += `import type { Page, Locator } from '@playwright/test';\n\n`;
-  code += `export const ${playbookName.toLowerCase()}Pb = new Playbook('${playbookName}', {\n`;
-  code += `  ${playName}: () =>\n`;
+  code += `export const ${toSafeIdentifier(playbookName.toLowerCase())}Pb = new Playbook(${JSON.stringify(playbookName)}, {\n`;
+  code += `  ${toSafeIdentifier(playName)}: () =>\n`;
   code += `    new Play()\n`;
 
   const indent = '      ';
@@ -158,7 +161,7 @@ export function compilePlaybook(
 
     const optionsStr = [
       node.data.timeout !== undefined ? `timeout: ${node.data.timeout}` : null,
-      skipText ? `skip: ${skipText}` : null,
+      skipText && node.type !== 'attempt' ? `skip: ${skipText}` : null,
     ]
       .filter(Boolean)
       .join(', ');
@@ -168,22 +171,22 @@ export function compilePlaybook(
     switch (node.type) {
       case 'nav': {
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Navigation action';
-        code += `${indent}.nav('${node.data.name}', async (page, _ctx, { lastOutcome, steps }) => {\n`;
+        code += `${indent}.nav(${JSON.stringify(node.data.name)}, async (page, _ctx, { lastOutcome, steps }) => {\n`;
         code += `${indent}  ${actionCode}\n`;
         code += `${indent}}${optionsArg})\n`;
         break;
       }
 
       case 'detect': {
-        const nameArg = node.data.name ? `'${node.data.name}', ` : '';
+        const nameArg = node.data.name ? `${JSON.stringify(node.data.name)}, ` : '';
         code += `${indent}.detect(${nameArg}(page) => [\n`;
         if (node.data.candidates && node.data.candidates.length > 0) {
           node.data.candidates.forEach(c => {
-            const locStr = c.selector.startsWith('page.') || c.selector.startsWith('p.') 
-              ? c.selector 
+            const locStr = c.selector.startsWith('page.') || c.selector.startsWith('p.')
+              ? c.selector
               : `page.locator('${c.selector.replace(/'/g, "\\'")}')`;
             code += `${indent}  {\n`;
-            code += `${indent}    name: '${c.name}',\n`;
+            code += `${indent}    name: ${JSON.stringify(c.name)},\n`;
             code += `${indent}    isSuccess: ${c.isSuccess},\n`;
             code += `${indent}    locator: ${locStr},\n`;
             code += `${indent}  },\n`;
@@ -198,7 +201,7 @@ export function compilePlaybook(
       case 'attempt': {
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Attempt action';
         code += `${indent}.attempt(\n`;
-        code += `${indent}  '${node.data.name}',\n`;
+        code += `${indent}  ${JSON.stringify(node.data.name)},\n`;
         code += `${indent}  async (page, _ctx, { lastOutcome, steps }) => {\n`;
         code += `${indent}    ${actionCode}\n`;
         code += `${indent}  },\n`;
@@ -210,9 +213,9 @@ export function compilePlaybook(
               : `p.locator('${o.selector.replace(/'/g, "\\'")}')`;
 
             if (o.type === 'success') {
-              code += `${indent}    Outcomes.success('${o.name}', (p) => ${selectorStr}),\n`;
+              code += `${indent}    Outcomes.success(${JSON.stringify(o.name)}, (p) => ${selectorStr}),\n`;
             } else if (o.type === 'failure') {
-              code += `${indent}    Outcomes.failure('${o.name}', (p) => ${selectorStr}),\n`;
+              code += `${indent}    Outcomes.failure(${JSON.stringify(o.name)}, (p) => ${selectorStr}),\n`;
             } else {
               code += `${indent}    Outcomes.timeout(),\n`;
             }
@@ -228,7 +231,7 @@ export function compilePlaybook(
       case 'prep': {
         const kind = node.data.kind || 'prep';
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Action code';
-        code += `${indent}.${kind}('${node.data.name}', async (page, _ctx, { lastOutcome, steps }) => {\n`;
+        code += `${indent}.${kind}(${JSON.stringify(node.data.name)}, async (page, _ctx, { lastOutcome, steps }) => {\n`;
         code += `${indent}  ${actionCode}\n`;
         code += `${indent}}${optionsArg})\n`;
         break;
@@ -236,7 +239,7 @@ export function compilePlaybook(
 
       case 'cleanup': {
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Revert logic';
-        code += `${indent}.cleanup('${node.data.name}', async (page, _ctx, { lastOutcome, steps }) => {\n`;
+        code += `${indent}.cleanup(${JSON.stringify(node.data.name)}, async (page, _ctx, { lastOutcome, steps }) => {\n`;
         code += `${indent}  ${actionCode}\n`;
         code += `${indent}}${optionsArg})\n`;
         break;

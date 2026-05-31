@@ -1,7 +1,17 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const playbooksDir = '/Users/cedrick/Documents/projects/Playwright Simple/test-replacement-poc/PoC/src/playbooks';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const playbooksDir = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : path.resolve(__dirname, '../test-replacement-poc/PoC/src/playbooks');
+
+if (!fs.existsSync(playbooksDir)) {
+  throw new Error(`Playbooks directory not found: ${playbooksDir}`);
+}
+
 const files = fs.readdirSync(playbooksDir).filter(f => f.endsWith('.ts') && f !== 'toast.ts');
 
 const result = [];
@@ -156,8 +166,11 @@ function splitArgs(str) {
   for (let i = 0; i < str.length; i++) {
     const char = str[i];
     if (inString) {
-      if (char === stringChar && str[i - 1] !== '\\') {
-        inString = false;
+      if (char === stringChar) {
+        let backslashCount = 0;
+        let j = i - 1;
+        while (j >= 0 && str[j] === '\\') { backslashCount++; j--; }
+        if (backslashCount % 2 === 0) inString = false;
       }
       continue;
     }
@@ -192,9 +205,12 @@ function extractCallbackBody(fnStr) {
     body = body.substring(1, body.length - 1).trim();
     // remove indent
     const lines = body.split('\n');
-    if (lines.length > 0) {
-      const minIndent = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^\s*/)[0].length));
+    const nonBlank = lines.filter(l => l.trim());
+    if (nonBlank.length > 0) {
+      const minIndent = Math.min(...nonBlank.map(l => l.match(/^\s*/)[0].length));
       body = lines.map(l => l.substring(minIndent)).join('\n');
+    } else {
+      body = '';
     }
   }
   return body;
@@ -383,9 +399,9 @@ for (const file of files) {
         if (prevNodeId) {
           if (prevNodeType === 'detect' && prevCandidates.length > 0) {
             // Find which candidates connect to this node
-            const skipText = nodeData.skipCode || '';
-            const neqMatch = /!==\s*['"`]([^'"`]+)['"`]/.exec(skipText);
-            const eqMatch = /===\s*['"`]([^'"`]+)['"`]/.exec(skipText);
+            const skipText = nodeData.skipCode || null;
+            const neqMatch = skipText ? /!==\s*['"`]([^'"`]+)['"`]/.exec(skipText) : null;
+            const eqMatch = skipText ? /===\s*['"`]([^'"`]+)['"`]/.exec(skipText) : null;
             
             let connectingNames = [];
             if (neqMatch) {
@@ -461,7 +477,7 @@ for (const file of files) {
                 name: c.name,
                 isSuccess: c.isSuccess,
                 selector: c.selector || '',
-                isTimeout: c.name === 'timeout' || c.name === 'noAccess' && (!c.selector || c.selector === 'page.locator("")' || c.selector === 'p.locator("")'),
+                isTimeout: (c.name === 'timeout' || (c.name === 'noAccess' && (!c.selector || c.selector === 'page.locator("")' || c.selector === 'p.locator("")'))),
                 timeoutMs: nodeData.timeout || 15000
               }
             });
@@ -495,7 +511,7 @@ for (const file of files) {
                 name: o.name,
                 isSuccess: o.type === 'success',
                 selector: o.selector || '',
-                isTimeout: o.type === 'timeout' || o.name === 'timeout',
+                isTimeout: (o.type === 'timeout' || o.name === 'timeout'),
                 timeoutMs: nodeData.timeout || 15000
               }
             });
@@ -541,6 +557,6 @@ for (const file of files) {
 }
 
 // Write the compiled visual playbooks list to a JSON file
-const outputPath = '/Users/cedrick/Documents/projects/Playwright Simple/lab/src/builder/preloadedPlaybooks.json';
+const outputPath = path.resolve(__dirname, '../lab/src/builder/preloadedPlaybooks.json');
 fs.writeFileSync(outputPath, JSON.stringify(result, null, 2), 'utf8');
 console.log(`Successfully compiled ${result.length} playbooks into ${outputPath}`);

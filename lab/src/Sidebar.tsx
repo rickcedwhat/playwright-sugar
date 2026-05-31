@@ -70,6 +70,7 @@ export default function Sidebar({ currentView, onNavigate }: Props) {
         style={linkStyle(currentView === 'datasets' || currentView === 'dataset-detail', collapsed)}
         onClick={() => onNavigate({ view: 'datasets' })}
         title="Datasets"
+        aria-label="Datasets"
       >
         <Database size={18} />
         {!collapsed && <span>Datasets</span>}
@@ -79,6 +80,7 @@ export default function Sidebar({ currentView, onNavigate }: Props) {
         style={linkStyle(currentView === 'settings', collapsed)}
         onClick={() => onNavigate({ view: 'settings' })}
         title="Settings"
+        aria-label="Settings"
       >
         <Settings size={18} />
         {!collapsed && <span>Settings</span>}
@@ -88,6 +90,7 @@ export default function Sidebar({ currentView, onNavigate }: Props) {
         style={linkStyle(currentView === 'builder', collapsed)}
         onClick={() => onNavigate({ view: 'builder' })}
         title="Playbook Builder"
+        aria-label="Playbook Builder"
       >
         <Workflow size={18} />
         {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Playbook Builder</span>}
@@ -113,6 +116,7 @@ export default function Sidebar({ currentView, onNavigate }: Props) {
           transition: 'all 0.2s ease',
         }}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {collapsed ? (
           <ChevronRight size={18} />

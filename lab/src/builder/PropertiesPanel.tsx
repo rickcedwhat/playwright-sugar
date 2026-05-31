@@ -467,9 +467,16 @@ export default function PropertiesPanel({ node, onClose, onUpdateNode }: Props) 
                       placeholder="e.g. 5000"
                       value={timeout || ''}
                       onChange={(e) => {
-                        const val = e.target.value ? parseInt(e.target.value) : undefined;
-                        setTimeoutVal(val);
-                        handleFieldChange({ timeout: val });
+                        if (e.target.value === '') {
+                          setTimeoutVal(undefined);
+                          handleFieldChange({ timeout: undefined });
+                          return;
+                        }
+                        const parsed = Number(e.target.value);
+                        if (Number.isInteger(parsed) && parsed >= 0) {
+                          setTimeoutVal(parsed);
+                          handleFieldChange({ timeout: parsed });
+                        }
                       }}
                       style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: '6px', padding: '8px 12px', fontSize: '13px', outline: 'none' }}
                     />
@@ -499,13 +506,15 @@ export default function PropertiesPanel({ node, onClose, onUpdateNode }: Props) 
           {/* Collapsible Section: Candidates / Outcomes */}
           {(node.type === 'detect' || node.type === 'attempt') && (
             <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setListCollapsed(!listCollapsed)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setListCollapsed(!listCollapsed); } }}
                 style={{
                   width: '100%',
                   padding: '10px 14px',
                   background: '#f9fafb',
-                  border: 'none',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -514,6 +523,8 @@ export default function PropertiesPanel({ node, onClose, onUpdateNode }: Props) 
                   fontSize: '12px',
                   color: '#4b5563',
                   borderBottom: listCollapsed ? 'none' : '1px solid #e5e7eb',
+                  outline: 'none',
+                  userSelect: 'none',
                 }}
               >
                 <span>
@@ -542,7 +553,7 @@ export default function PropertiesPanel({ node, onClose, onUpdateNode }: Props) 
                   </button>
                   {listCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                 </div>
-              </button>
+              </div>
 
               {!listCollapsed && (
                 <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '200px', overflowY: 'auto' }}>

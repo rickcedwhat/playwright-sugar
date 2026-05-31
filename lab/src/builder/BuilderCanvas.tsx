@@ -43,7 +43,7 @@ export default function BuilderCanvas({
 
   const onConnect = useCallback(
     (params: Connection) => {
-      setEdges((eds) => addEdge({ ...params, animated: true, style: { strokeWidth: 2 } }, eds));
+      setEdges((eds) => addEdge({ ...params, animated: true, style: { strokeWidth: 2 }, data: { label: '' } }, eds));
     },
     [setEdges]
   );

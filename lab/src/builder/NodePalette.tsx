@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+
+interface NodePaletteProps {
+  onInsert?: (type: string) => void;
+}
 
 const paletteContainerStyle: React.CSSProperties = {
   width: '240px',
@@ -39,86 +43,55 @@ const blockDescStyle: React.CSSProperties = {
   lineHeight: '1.4',
 };
 
-export default function NodePalette() {
+const blocks = [
+  { type: 'nav',     color: '#8b5cf6', title: 'Navigation',      badge: '.nav()',     desc: 'Route navigation action. Navigate to page/tab target.' },
+  { type: 'detect',  color: '#10b981', title: 'State Detection',  badge: '.detect()',  desc: 'List potential page states. Branches execution flow.' },
+  { type: 'attempt', color: '#3b82f6', title: 'Action Attempt',   badge: '.attempt()', desc: 'Perform action and match against expected toast/modal outcomes.' },
+  { type: 'prep',    color: '#0d9488', title: 'Prep / Act',       badge: '.prep()',    desc: 'Preparation or standard linear action callback.' },
+  { type: 'cleanup', color: '#ea580c', title: 'Cleanup / Revert', badge: '.cleanup()', desc: 'Teardown script. Reverts mutations if test fails/succeeds.' },
+] as const;
+
+export default function NodePalette({ onInsert }: NodePaletteProps) {
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
   };
+
+  const handleKeyDown = useCallback((event: React.KeyboardEvent, nodeType: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onInsert?.(nodeType);
+    }
+  }, [onInsert]);
 
   return (
     <div style={paletteContainerStyle}>
       <div>
         <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>Step Palette</div>
         <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-          Drag steps onto the canvas to design your play.
+          Drag or click steps to add them to the canvas.
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {/* Navigation block */}
-        <div
-          style={blockStyle('#8b5cf6')}
-          onDragStart={(event) => onDragStart(event, 'nav')}
-          draggable
-        >
-          <div style={blockTitleStyle}>
-            <span>Navigation</span>
-            <span style={{ fontSize: '9px', color: '#8b5cf6' }}>.nav()</span>
+        {blocks.map(({ type, color, title, badge, desc }) => (
+          <div
+            key={type}
+            role="button"
+            tabIndex={0}
+            style={{ ...blockStyle(color), outline: 'none' }}
+            draggable
+            onDragStart={(event) => onDragStart(event, type)}
+            onClick={() => onInsert?.(type)}
+            onKeyDown={(event) => handleKeyDown(event, type)}
+          >
+            <div style={blockTitleStyle}>
+              <span>{title}</span>
+              <span style={{ fontSize: '9px', color }}>{badge}</span>
+            </div>
+            <div style={blockDescStyle}>{desc}</div>
           </div>
-          <div style={blockDescStyle}>Route navigation action. Navigate to page/tab target.</div>
-        </div>
-
-        {/* State Detection block */}
-        <div
-          style={blockStyle('#10b981')}
-          onDragStart={(event) => onDragStart(event, 'detect')}
-          draggable
-        >
-          <div style={blockTitleStyle}>
-            <span>State Detection</span>
-            <span style={{ fontSize: '9px', color: '#10b981' }}>.detect()</span>
-          </div>
-          <div style={blockDescStyle}>List potential page states. Branches execution flow.</div>
-        </div>
-
-        {/* Action Attempt block */}
-        <div
-          style={blockStyle('#3b82f6')}
-          onDragStart={(event) => onDragStart(event, 'attempt')}
-          draggable
-        >
-          <div style={blockTitleStyle}>
-            <span>Action Attempt</span>
-            <span style={{ fontSize: '9px', color: '#3b82f6' }}>.attempt()</span>
-          </div>
-          <div style={blockDescStyle}>Perform action and match against expected toast/modal outcomes.</div>
-        </div>
-
-        {/* Prep / Act block */}
-        <div
-          style={blockStyle('#0d9488')}
-          onDragStart={(event) => onDragStart(event, 'prep')}
-          draggable
-        >
-          <div style={blockTitleStyle}>
-            <span>Prep / Act</span>
-            <span style={{ fontSize: '9px', color: '#0d9488' }}>.prep()</span>
-          </div>
-          <div style={blockDescStyle}>Preparation or standard linear action callback.</div>
-        </div>
-
-        {/* Cleanup block */}
-        <div
-          style={blockStyle('#ea580c')}
-          onDragStart={(event) => onDragStart(event, 'cleanup')}
-          draggable
-        >
-          <div style={blockTitleStyle}>
-            <span>Cleanup / Revert</span>
-            <span style={{ fontSize: '9px', color: '#ea580c' }}>.cleanup()</span>
-          </div>
-          <div style={blockDescStyle}>Teardown script. Reverts mutations if test fails/succeeds.</div>
-        </div>
+        ))}
       </div>
     </div>
   );
