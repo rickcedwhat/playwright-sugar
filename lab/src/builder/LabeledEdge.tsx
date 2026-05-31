@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { EdgeLabelRenderer, useReactFlow, useStore } from '@xyflow/react';
 import type { EdgeProps } from '@xyflow/react';
 
@@ -54,6 +54,10 @@ export default function LabeledEdge({
   // ── Drag ──────────────────────────────────────────────────────────────────
   const dragging = useRef(false);
   const dragStart = useRef({ mouseX: 0, mouseY: 0, cpOffsetX: 0, cpOffsetY: 0 });
+  const dragCleanup = useRef<(() => void) | null>(null);
+
+  // Remove listeners if the edge unmounts mid-drag
+  useEffect(() => () => { dragCleanup.current?.(); }, []);
 
   const onLabelMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -87,10 +91,15 @@ export default function LabeledEdge({
         dragging.current = false;
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
+        dragCleanup.current = null;
       };
 
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
+      dragCleanup.current = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
     },
     [id, cpOffsetX, cpOffsetY, zoom, setEdges]
   );
