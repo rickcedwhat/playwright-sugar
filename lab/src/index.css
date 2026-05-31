@@ -11,3 +11,9 @@ body {
 button { cursor: pointer; }
 h1, h2, h3 { margin: 0 0 16px; font-weight: 600; }
 p { margin: 0 0 8px; }
+
+/* Monaco editor custom highlight for editable ranges */
+.monaco-editable-line {
+  background-color: #172847 !important;
+  border-left: 4px solid #3b82f6 !important;
+}

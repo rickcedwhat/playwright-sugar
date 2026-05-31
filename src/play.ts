@@ -27,7 +27,7 @@ function _getFnName(fn: Function): string | undefined {
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export type ActOptions = {
-  skip?: boolean | ((ctx: PlayCtx, lastOutcome?: PlayOutcome) => boolean);
+  skip?: boolean | ((ctx: PlayCtx, history: PlayHistory) => boolean);
 };
 
 export type DetectOptions = ActOptions & {
@@ -73,6 +73,11 @@ export type PlayOutcome = {
   payload?: unknown;
 };
 
+export type PlayHistory = {
+  lastOutcome?: PlayOutcome;
+  steps: Record<string, PlayOutcome>;
+};
+
 /** Return value of {@link Play.run} — `lastOutcome` is the final detect/attempt resolution, if any. */
 export type PlayRunResult = {
   ctx: PlayCtx;
@@ -95,13 +100,13 @@ export type PlayCtx = {
   [key: string]: unknown;
 };
 
-export type ActFn = (page: Page, ctx: PlayCtx, outcome: PlayOutcome | undefined) => Promise<void>;
+export type ActFn = (page: Page, ctx: PlayCtx, history: PlayHistory) => Promise<void>;
 
 // ── Internal act record (discriminated union) ─────────────────────────────────
 
 type ActRecord =
   | { kind: 'act'; name: string; fn: ActFn; skip?: ActOptions['skip'] }
-  | { kind: 'detect'; fn: (page: Page) => DetectCandidate[]; timeout?: number; ambiguityBufferMs?: number; skip?: ActOptions['skip'] }
+  | { kind: 'detect'; name?: string; fn: (page: Page) => DetectCandidate[]; timeout?: number; ambiguityBufferMs?: number; skip?: ActOptions['skip'] }
   | {
       kind: 'attempt';
       name: string;
@@ -155,9 +160,19 @@ export class Play {
     return this._append({ kind: 'reload', opts: reloadOpts, skip: opts.skip });
   }
 
-  detect(fn: (page: Page) => DetectCandidate[], opts: DetectOptions = {}): Play {
+  detect(fn: (page: Page) => DetectCandidate[], opts?: DetectOptions): Play;
+  detect(name: string, fn: (page: Page) => DetectCandidate[], opts?: DetectOptions): Play;
+  detect(
+    nameOrFn: string | ((page: Page) => DetectCandidate[]),
+    fnOrOpts?: ((page: Page) => DetectCandidate[]) | DetectOptions,
+    maybeOpts?: DetectOptions
+  ): Play {
+    const fn = (typeof nameOrFn === 'string' ? fnOrOpts : nameOrFn) as (page: Page) => DetectCandidate[];
+    const name = typeof nameOrFn === 'string' ? nameOrFn : undefined;
+    const opts = ((typeof nameOrFn === 'string' ? maybeOpts : fnOrOpts) || {}) as DetectOptions;
     return this._append({
       kind: 'detect',
+      ...(name !== undefined && { name }),
       fn,
       ...(opts.timeout !== undefined && { timeout: opts.timeout }),
       ...(opts.ambiguityBufferMs !== undefined && { ambiguityBufferMs: opts.ambiguityBufferMs }),
@@ -242,6 +257,9 @@ export class Play {
     let attemptReached = false;
     let runError: Error | undefined;
     let lastOutcome: PlayOutcome | undefined;
+    const history: PlayHistory = {
+      steps: {}
+    };
 
     for (const act of mainActs) {
       const actName = _actLabel(act);
@@ -254,7 +272,7 @@ export class Play {
         shouldSkip = true;
       } else if (act.kind !== 'attempt' && act.skip !== undefined) {
         try {
-          shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+          shouldSkip = typeof act.skip === 'function' ? act.skip(ctx, history) : act.skip;
         } catch (err: unknown) {
           const raw = err instanceof Error ? err : new Error(String(err));
           const wrapped = new Error(`[${label} > ${actName}] skip predicate threw: ${raw.message}`, { cause: raw });
@@ -276,7 +294,7 @@ export class Play {
       try {
         switch (act.kind) {
           case 'act':
-            await act.fn(page, ctx, lastOutcome);
+            await act.fn(page, ctx, history);
             console.log(`${aPrefix}✅ ${actName}  (${Date.now() - t}ms)`);
             break;
 
@@ -301,6 +319,10 @@ export class Play {
             else if (opts?.ambiguityBufferMs !== undefined) detectParams.ambiguityBufferMs = opts.ambiguityBufferMs;
             const detectResult = await detectState(detectParams);
             lastOutcome = outcomeFromResolution(detectResult);
+            history.lastOutcome = lastOutcome;
+            if (act.name) {
+              history.steps[act.name] = lastOutcome;
+            }
             console.log(`${aPrefix}✅ ${actName}  (${Date.now() - t}ms) → outcome: ${lastOutcome.name}`);
             break;
           }
@@ -323,13 +345,15 @@ export class Play {
               attemptOpts.ambiguityBufferMs = opts.ambiguityBufferMs;
             }
 
-            const incoming = lastOutcome;
+            const incoming = history;
             const result = await attemptAction(
               () => act.action(page, ctx, incoming),
               resolvedOutcomes,
               attemptOpts
             );
             lastOutcome = outcomeFromResolution(result);
+            history.lastOutcome = lastOutcome;
+            history.steps[act.name] = lastOutcome;
 
             const ms = Date.now() - t;
             if (result.isSuccess) {
@@ -355,7 +379,7 @@ export class Play {
 
         let shouldSkipCleanup: boolean | undefined;
         try {
-          shouldSkipCleanup = typeof act.skip === 'function' ? act.skip(ctx, lastOutcome) : act.skip;
+          shouldSkipCleanup = typeof act.skip === 'function' ? act.skip(ctx, history) : act.skip;
         } catch (err: unknown) {
           const raw = err instanceof Error ? err : new Error(String(err));
           const wrapped = new Error(`[${label} > cleanup] skip predicate threw: ${raw.message}`, { cause: raw });
@@ -370,7 +394,7 @@ export class Play {
 
         const t = Date.now();
         try {
-          await act.fn(page, ctx, lastOutcome);
+          await act.fn(page, ctx, history);
           console.log(`${aPrefix}✅ cleanup  (${Date.now() - t}ms)`);
         } catch (err: unknown) {
           const ms = Date.now() - t;
@@ -399,7 +423,7 @@ function _actLabel(act: ActRecord): string {
     case 'act':
       return act.name;
     case 'detect':
-      return 'detect';
+      return act.name ? `detect: ${act.name}` : 'detect';
     case 'attempt':
       return act.name === 'attempt' ? 'attempt' : `attempt: ${act.name}`;
     case 'cleanup':
