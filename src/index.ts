@@ -14,3 +14,7 @@ export * from './hoverMenu.js';
 export * from './strategies.js';
 
 export * from './watchFor.js';
+export * from './waitForCondition.js';
+export * from './elementTracker.js';
+export * from './stringUtils.js';
+export * from './stabilization.js';
