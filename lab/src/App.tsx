@@ -6,13 +6,15 @@ import DatasetDetailPage from './DatasetDetailPage';
 import SettingsPage from './SettingsPage';
 import LeaveDialog from './LeaveDialog';
 import { parseInitialRouteFromUrl } from './urlBootstrap';
+import PlaybookBuilder from './builder/PlaybookBuilder';
 
 export type Dataset = { id: string; name: string };
 
 type Route =
   | { view: 'datasets' }
   | { view: 'dataset-detail'; id: string }
-  | { view: 'settings' };
+  | { view: 'settings' }
+  | { view: 'builder' };
 
 function loadDatasets(): Dataset[] {
   try {
@@ -80,6 +82,7 @@ export default function App() {
           />
         )}
         {route.view === 'settings' && <SettingsPage />}
+        {route.view === 'builder' && <PlaybookBuilder />}
       </main>
 
       {pendingRoute && (
