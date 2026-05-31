@@ -57,11 +57,11 @@ function getWrapperTemplate(nodeType: string | undefined, nodeName: string, prep
 
   switch (cleanType) {
     case 'nav':
-      header = `import { Page } from '@playwright/test';\nimport { PlayOutcome } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const lastOutcome: PlayOutcome | undefined;\ndeclare const steps: Record<string, PlayOutcome>;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.nav('${cleanName}', async (page, _ctx, { lastOutcome, steps }) => {`;
+      header = `import { Page } from '@playwright/test';\nimport { PlayHistory } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const history: PlayHistory;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.nav('${cleanName}', async (page, _ctx, history) => {`;
       footer = `\n});`;
       break;
     case 'prep':
-      header = `import { Page } from '@playwright/test';\nimport { PlayCtx, PlayOutcome } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const _ctx: PlayCtx;\ndeclare const lastOutcome: PlayOutcome | undefined;\ndeclare const steps: Record<string, PlayOutcome>;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.${prepKind}('${cleanName}', async (page, _ctx, { lastOutcome, steps }) => {`;
+      header = `import { Page } from '@playwright/test';\nimport { PlayCtx, PlayHistory } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const _ctx: PlayCtx;\ndeclare const history: PlayHistory;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.${prepKind}('${cleanName}', async (page, _ctx, history) => {`;
       footer = `\n});`;
       break;
     case 'attempt': {
@@ -85,12 +85,12 @@ function getWrapperTemplate(nodeType: string | undefined, nodeName: string, prep
       }
       outcomesList += `  ]`;
 
-      header = `import { Page } from '@playwright/test';\nimport { PlayCtx, PlayOutcome, Outcomes } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const _ctx: PlayCtx;\ndeclare const lastOutcome: PlayOutcome | undefined;\ndeclare const steps: Record<string, PlayOutcome>;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.attempt(\n  '${cleanName}',\n  async (page, _ctx, { lastOutcome, steps }) => {`;
+      header = `import { Page } from '@playwright/test';\nimport { PlayCtx, PlayHistory, Outcomes } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const _ctx: PlayCtx;\ndeclare const history: PlayHistory;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.attempt(\n  '${cleanName}',\n  async (page, _ctx, history) => {`;
       footer = `\n  },\n${outcomesList}\n);`;
       break;
     }
     case 'cleanup':
-      header = `import { Page } from '@playwright/test';\nimport { PlayCtx, PlayOutcome } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const _ctx: PlayCtx;\ndeclare const lastOutcome: PlayOutcome | undefined;\ndeclare const steps: Record<string, PlayOutcome>;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.cleanup('${cleanName}', async (page, _ctx, { lastOutcome, steps }) => {`;
+      header = `import { Page } from '@playwright/test';\nimport { PlayCtx, PlayHistory } from '@rickcedwhat/playwright-sugar';\n\ndeclare const page: Page;\ndeclare const _ctx: PlayCtx;\ndeclare const history: PlayHistory;\ndeclare const pb: any;\n\n// Visual Playbook Step:\nawait pb.cleanup('${cleanName}', async (page, _ctx, history) => {`;
       footer = `\n});`;
       break;
   }

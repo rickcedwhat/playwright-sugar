@@ -456,11 +456,11 @@ function PlaybookBuilderContent() {
         break;
       case 'prep':
         name = 'Prepare action';
-        initialData = { label: 'Preparation', name, kind: 'prep', code: "if (lastOutcome?.name === 'tableState') {\n  // Do something...\n}" };
+        initialData = { label: 'Preparation', name, kind: 'prep', code: "if (history.lastOutcome?.name === 'tableState') {\n  // Do something...\n}" };
         break;
       case 'cleanup':
         name = 'Revert changes';
-        initialData = { label: 'Cleanup', name, code: "if (lastOutcome?.isSuccess) {\n  // Revert changes...\n}" };
+        initialData = { label: 'Cleanup', name, code: "if (history.lastOutcome?.isSuccess) {\n  // Revert changes...\n}" };
         break;
     }
     const newNode: Node<NodeData> = {

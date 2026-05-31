@@ -305,11 +305,27 @@ function parseOutcomes(outcomesStr) {
         });
       }
     } else if (timeoutMatch) {
-      outcomes.push({
-        name: 'timeout',
-        type: 'timeout',
-        selector: ''
-      });
+      const args = splitArgs(timeoutMatch[1]);
+      let name = 'timeout';
+      let selector = '';
+      let type = 'timeout';
+
+      if (args.length > 0) {
+        const firstIsString = args[0].startsWith("'") || args[0].startsWith('"') || args[0].startsWith('`');
+        if (firstIsString) {
+          name = args[0].slice(1, -1);
+          if (args[1]) selector = cleanSelectorLambda(args[1]);
+          const optsArg = args[2] || '';
+          if (/isSuccess\s*:\s*true/.test(optsArg)) type = 'success';
+        } else {
+          // No name arg — first arg could be locator lambda or opts
+          const optsArg = args[args.length - 1] || '';
+          if (/isSuccess\s*:\s*true/.test(optsArg)) type = 'success';
+          if (args[0] && !args[0].includes('isSuccess')) selector = cleanSelectorLambda(args[0]);
+        }
+      }
+
+      outcomes.push({ name, type, selector });
     }
   });
   

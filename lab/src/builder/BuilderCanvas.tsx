@@ -111,7 +111,7 @@ export default function BuilderCanvas({
             label: 'Preparation',
             name,
             kind: 'prep',
-            code: "if (lastOutcome?.name === 'tableState') {\n  // Do something...\n}",
+            code: "if (history.lastOutcome?.name === 'tableState') {\n  // Do something...\n}",
           };
           break;
         case 'cleanup':
@@ -119,7 +119,7 @@ export default function BuilderCanvas({
           initialData = {
             label: 'Cleanup',
             name,
-            code: "if (lastOutcome?.isSuccess) {\n  // Revert changes...\n}",
+            code: "if (history.lastOutcome?.isSuccess) {\n  // Revert changes...\n}",
           };
           break;
       }

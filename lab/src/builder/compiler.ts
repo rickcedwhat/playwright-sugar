@@ -171,7 +171,7 @@ export function compilePlaybook(
     switch (node.type) {
       case 'nav': {
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Navigation action';
-        code += `${indent}.nav(${JSON.stringify(node.data.name)}, async (page, _ctx, { lastOutcome, steps }) => {\n`;
+        code += `${indent}.nav(${JSON.stringify(node.data.name)}, async (page, _ctx, history) => {\n`;
         code += `${indent}  ${actionCode}\n`;
         code += `${indent}}${optionsArg})\n`;
         break;
@@ -202,7 +202,7 @@ export function compilePlaybook(
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Attempt action';
         code += `${indent}.attempt(\n`;
         code += `${indent}  ${JSON.stringify(node.data.name)},\n`;
-        code += `${indent}  async (page, _ctx, { lastOutcome, steps }) => {\n`;
+        code += `${indent}  async (page, _ctx, history) => {\n`;
         code += `${indent}    ${actionCode}\n`;
         code += `${indent}  },\n`;
         code += `${indent}  [\n`;
@@ -231,7 +231,7 @@ export function compilePlaybook(
       case 'prep': {
         const kind = node.data.kind || 'prep';
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Action code';
-        code += `${indent}.${kind}(${JSON.stringify(node.data.name)}, async (page, _ctx, { lastOutcome, steps }) => {\n`;
+        code += `${indent}.${kind}(${JSON.stringify(node.data.name)}, async (page, _ctx, history) => {\n`;
         code += `${indent}  ${actionCode}\n`;
         code += `${indent}}${optionsArg})\n`;
         break;
@@ -239,7 +239,7 @@ export function compilePlaybook(
 
       case 'cleanup': {
         const actionCode = node.data.code ? node.data.code.trim().replace(/\n/g, '\n' + indent + '  ') : '// Revert logic';
-        code += `${indent}.cleanup(${JSON.stringify(node.data.name)}, async (page, _ctx, { lastOutcome, steps }) => {\n`;
+        code += `${indent}.cleanup(${JSON.stringify(node.data.name)}, async (page, _ctx, history) => {\n`;
         code += `${indent}  ${actionCode}\n`;
         code += `${indent}}${optionsArg})\n`;
         break;
