@@ -190,26 +190,38 @@ describe('.detect() run result and third arg', () => {
     );
   });
 
-  it('passes undefined as third arg to acts before any detect/attempt', async () => {
+  it('has undefined history.lastOutcome before any detect/attempt', async () => {
     const page = makePage();
     let arg: unknown = 'unset';
-    const play = new Play().act('first', async (_p, _c, outcome) => { arg = outcome; });
+    const play = new Play().act('first', async (_p, _c, history) => { arg = history.lastOutcome; });
 
     await play.run('label', { page });
 
     expect(arg).toBeUndefined();
   });
 
-  it('passes detect outcome as third arg to the following act', async () => {
+  it('passes detect outcome as history.lastOutcome to the following act', async () => {
     const page = makePage();
     let arg: unknown;
     const play = new Play()
       .detect(() => [{ name: 'found', isSuccess: true, locator: mockLocator }])
-      .act('after', async (_p, _c, outcome) => { arg = outcome; });
+      .act('after', async (_p, _c, history) => { arg = history.lastOutcome; });
 
     await play.run('label', { page });
 
     expect(arg).toMatchObject({ name: 'found', isSuccess: true });
+  });
+
+  it('stores named detect outcome in history.steps', async () => {
+    const page = makePage();
+    let stepsHistory: any;
+    const play = new Play()
+      .detect('myDetect', () => [{ name: 'found', isSuccess: true, locator: mockLocator }])
+      .act('after', async (_p, _c, history) => { stepsHistory = history.steps; });
+
+    await play.run('label', { page });
+
+    expect(stepsHistory.myDetect).toMatchObject({ name: 'found', isSuccess: true });
   });
 });
 
@@ -257,15 +269,15 @@ describe('.attempt() and .cleanup()', () => {
     expect(cleanupFn).toHaveBeenCalledOnce();
   });
 
-  it('cleanup receives attempt outcome as third argument', async () => {
+  it('cleanup receives attempt outcome as history.lastOutcome', async () => {
     const page = makePage();
     let seenArg: unknown;
     mockAttemptAction.mockResolvedValueOnce({ isSuccess: false, outcome: 'blocked', payload: undefined });
 
     const play = new Play()
       .attempt(async () => {}, [Outcomes.failure(mockLocator)])
-      .cleanup(async (_p, _c, outcome) => {
-        seenArg = outcome;
+      .cleanup(async (_p, _c, history) => {
+        seenArg = history.lastOutcome;
       });
 
     await play.run('label', { page });
@@ -273,7 +285,7 @@ describe('.attempt() and .cleanup()', () => {
     expect(seenArg).toMatchObject({ isSuccess: false, name: 'blocked' });
   });
 
-  it('attempt trigger receives prior detect outcome as third argument', async () => {
+  it('attempt trigger receives prior detect outcome as history.lastOutcome', async () => {
     const page = makePage();
     mockDetectState.mockResolvedValueOnce({
       isSuccess: true,
@@ -289,13 +301,51 @@ describe('.attempt() and .cleanup()', () => {
 
     const play = new Play()
       .detect(() => [{ name: 'empty', isSuccess: true, locator: mockLocator }])
-      .attempt('step', async (_p, _c, o) => {
-        received = o;
+      .attempt('step', async (_p, _c, history) => {
+        received = history.lastOutcome;
       }, [Outcomes.success(mockLocator)]);
 
     await play.run('label', { page });
 
     expect(received).toMatchObject({ name: 'empty', isSuccess: true, payload: 7 });
+  });
+
+  it('cleanup block can access both prior named detect outcome and attempt outcome via history', async () => {
+    const page = makePage();
+    let findRowOutcome: any;
+    let saveUpdateOutcome: any;
+
+    mockDetectState.mockResolvedValueOnce({ isSuccess: true, outcome: 'foundRow', locator: mockLocator });
+    mockAttemptAction.mockResolvedValueOnce({ isSuccess: true, outcome: 'savedUpdate' });
+
+    const play = new Play()
+      .detect('findRow', () => [{ name: 'foundRow', isSuccess: true, locator: mockLocator }])
+      .attempt('saveUpdate', async () => {}, [Outcomes.success(mockLocator)])
+      .cleanup(async (_p, _c, history) => {
+        findRowOutcome = history.steps.findRow;
+        saveUpdateOutcome = history.steps.saveUpdate;
+      });
+
+    await play.run('label', { page });
+
+    expect(findRowOutcome).toMatchObject({ name: 'foundRow', isSuccess: true });
+    expect(saveUpdateOutcome).toMatchObject({ name: 'savedUpdate', isSuccess: true });
+  });
+
+  it('skip predicate receives history object and can skip step conditionally', async () => {
+    const page = makePage();
+    const actFn = vi.fn().mockResolvedValue(undefined);
+    mockDetectState.mockResolvedValueOnce({ isSuccess: true, outcome: 'notFound', locator: mockLocator });
+
+    const play = new Play()
+      .detect('findRow', () => [{ name: 'notFound', isSuccess: true }])
+      .act('conditionalStep', actFn, {
+        skip: (ctx, history) => history.steps.findRow?.name === 'notFound'
+      });
+
+    await play.run('label', { page });
+
+    expect(actFn).not.toHaveBeenCalled();
   });
 
   it('play.run returns lastOutcome after attempt from attemptAction resolution', async () => {
