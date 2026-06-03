@@ -114,9 +114,9 @@ function chipPlacementCSS(p: ChipPlacement): StyleMap {
   if (h === 'left')   base.left   = `${MARGIN}px`;
   if (h === 'right')  base.right  = `${MARGIN}px`;
   if (h === 'center') base.left   = '50%';
-  if (v === 'center' && h === 'center') base.transform = 'translate(-50%, -50%)';
-  else if (v === 'center')              base.transform = 'translateY(-50%)';
-  else if (h === 'center')              base.transform = 'translateX(-50%)';
+  // ChipPlacement never contains "center-center", so handle axes independently
+  if (v === 'center') base.transform = 'translateY(-50%)';
+  if (h === 'center') base.transform = 'translateX(-50%)';
   return base;
 }
 
@@ -202,7 +202,19 @@ async function createBar(
     async moveTo(x, y) { offsetX = x; offsetY = y; await apply(); },
     hide,
     show,
-    async hideDuring(fn) { await hide(); try { return await fn(); } finally { await show(); } },
+    async hideDuring(fn) {
+      await hide();
+      let fnError: unknown;
+      let result: Awaited<ReturnType<typeof fn>>;
+      let hasFnError = false;
+      try { result = await fn(); } catch (e) { fnError = e; hasFnError = true; }
+      try { await show(); } catch (showError) {
+        if (hasFnError) throw fnError; // original error takes precedence
+        throw showError;
+      }
+      if (hasFnError) throw fnError;
+      return result!;
+    },
     async remove() {
       cleanup();
       _active.delete(page);
@@ -259,7 +271,19 @@ async function createChip(
     async moveTo(x, y) { overrideX = x; overrideY = y; await apply(); },
     hide,
     show,
-    async hideDuring(fn) { await hide(); try { return await fn(); } finally { await show(); } },
+    async hideDuring(fn) {
+      await hide();
+      let fnError: unknown;
+      let result: Awaited<ReturnType<typeof fn>>;
+      let hasFnError = false;
+      try { result = await fn(); } catch (e) { fnError = e; hasFnError = true; }
+      try { await show(); } catch (showError) {
+        if (hasFnError) throw fnError; // original error takes precedence
+        throw showError;
+      }
+      if (hasFnError) throw fnError;
+      return result!;
+    },
     async remove() {
       cleanup();
       _active.delete(page);
