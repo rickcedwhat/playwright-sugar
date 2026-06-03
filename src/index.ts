@@ -14,3 +14,4 @@ export * from './hoverMenu.js';
 export * from './strategies.js';
 
 export * from './watchFor.js';
+export * from './pageTag.js';
