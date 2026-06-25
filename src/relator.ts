@@ -1,30 +1,26 @@
 import type { Locator } from '@playwright/test';
 
 /**
- * Finds a target element based on its proximity to an anchor element.
+ * Finds a target element based on its proximity to one or more anchor elements.
  * This is a prototype from @rickcedwhat/playwright-sugar that is in the works
  */
 export function relator(
-  anchor: Locator,
   target: Locator,
+  anchor: Locator | Locator[],
   container?: Locator,
 ): Locator {
-  const page = anchor.page();
-  let result: Locator;
+  const anchors = Array.isArray(anchor) ? anchor : [anchor];
 
-  if (container) {
-    result = container.filter({ has: anchor }).last().locator(target);
-  } else {
-    // Find the smallest shared parent using a global search.
-    // This allows anchor and target to be pre-scoped locators (like dialog.getByText)
-    // without triggering a "nested" search in the .filter({ has: ... }) call.
-    result = page
-      .locator('*')
-      .filter({ has: anchor })
-      .filter({ has: target })
-      .last()
-      .locator(target);
-  }
+  // Find the smallest shared parent using a global search.
+  // This allows anchors and target to be pre-scoped locators (like dialog.getByText)
+  // without triggering a "nested" search in the .filter({ has: ... }) call.
+  const scope = container
+    ? anchors.reduce((s, a) => s.filter({ has: a }), container)
+    : anchors
+        .reduce((s, a) => s.filter({ has: a }), target.page().locator('*'))
+        .filter({ has: target });
+
+  const result = scope.last().locator(target);
 
   void result.count().then(count => {
     if (count === 0) {
