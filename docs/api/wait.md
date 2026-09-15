@@ -1,0 +1,41 @@
+# wait
+
+Pauses execution for a specified duration with an optional visual countdown overlay. Useful during headed-mode debugging to see when and why a test is deliberately waiting.
+
+## Signature
+
+```ts
+wait(
+  page: Page,
+  ms: number,
+  options?: WaitOptions
+): Promise<void>
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `message` | `'Waiting'` | Custom text shown in the overlay. |
+| `overlay` | `true` | Set to `false` to wait without the visual overlay. |
+
+## Example
+
+```ts
+import { wait } from '@rickcedwhat/playwright-sugar';
+
+// 3-second wait with a countdown overlay
+await wait(page, 3000);
+
+// Custom message
+await wait(page, 5000, { message: 'Waiting for webhook…' });
+
+// Silent wait (no overlay)
+await wait(page, 2000, { overlay: false });
+```
+
+## When to use
+
+`page.waitForTimeout(ms)` is sufficient for most waits. Use `wait` when:
+
+- You are running tests in headed mode and want to see *why* a pause is happening.
+- You are debugging timing issues and need a visual indicator of how long a wait has remaining.
+- You want a centralized wait utility that can be toggled between visible and silent.

@@ -102,6 +102,17 @@ await clickToOpen(
 
 ---
 
+### 6. `wait`
+A visual countdown wrapper for `page.waitForTimeout`. Shows an overlay with remaining time in headed mode.
+
+```typescript
+import { wait } from '@rickcedwhat/playwright-sugar';
+
+await wait(page, 5000, { message: 'Waiting for webhook…' });
+```
+
+---
+
 ## The @rickcedwhat Suite
 
 This library is designed to work alongside:

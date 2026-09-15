@@ -30,6 +30,7 @@ export default defineConfig({
           { text: 'verifiedFill', link: '/api/verified-fill' },
           { text: 'clickToOpen', link: '/api/click-to-open' },
           { text: 'findByScrolling', link: '/api/find-by-scrolling' },
+          { text: 'wait', link: '/api/wait' },
         ]
       },
       {

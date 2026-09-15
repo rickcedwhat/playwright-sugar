@@ -15,3 +15,4 @@ export * from './strategies.js';
 
 export * from './watchFor.js';
 export * from './pageTag.js';
+export * from './wait.js';
