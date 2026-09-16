@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { Director, Playbook, Play, Outcomes } from '../src/index.js';
+import { Outcomes } from '../../src/outcomes.js';
+import { Director } from './director.js';
+import { Playbook } from './playbook.js';
+import { Play } from './play.js';
 
 // ── Dataset Playbook ──────────────────────────────────────────────────────────
 //

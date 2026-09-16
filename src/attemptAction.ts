@@ -107,7 +107,7 @@ ${errorMsg}
     }
 
     let resolvedCount = 0;
-    let bufferTimer: NodeJS.Timeout | null = null;
+    let bufferTimer: ReturnType<typeof setTimeout> | null = null;
 
     candidatePromises.forEach(p => {
       p.then(winner => {

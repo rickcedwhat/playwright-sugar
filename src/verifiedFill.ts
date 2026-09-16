@@ -26,7 +26,10 @@ export async function verifiedFill(
     try {
       await expect(locator).toHaveValue(value, { timeout });
     } catch (e) {
-      // Re-try once if it failed (sometimes a single retry handles the lag)
+      console.warn(
+        '[verifiedFill] Value did not stick on first fill; retrying once. ' +
+          'If this is frequent, the field may be fighting SPA state updates.'
+      );
       await locator.fill(value);
       await locator.blur();
       await expect(locator).toHaveValue(value, { timeout });
