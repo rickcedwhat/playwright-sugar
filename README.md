@@ -3,8 +3,8 @@
 Small Playwright helpers that make QA lives easier: less flakiness, less boilerplate, clearer failures.
 
 Each helper aims for **two forms**:
-- **Lite** — copy-paste from [`snippets/`](./snippets) into your own repo (no dependency)
-- **Robust** — install the package for intelligent errors, logs, and shared fixes
+- **Robust** — install the package for intelligent errors, logs, and shared fixes (`src/`)
+- **Lite** — copy-paste from [`snippets/`](./snippets) (generated from `src/` so they cannot drift; `pnpm run snippets:generate`)
 
 ## Installation
 

@@ -16,9 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`snippets/`** — copy-paste lite variants of `attemptAction`, `verifiedFill`, `clickToOpen`, and `relator`.
+- **`snippets/`** — copy-paste lite variants of `attemptAction`, `verifiedFill`, `clickToOpen`, and `relator`, **generated** from annotated `src/` via `pnpm run snippets:generate` (`snippets:check` in CI / prepublish).
 - **`docs/ISSUE_TRIAGE.md`** — recommended closes/keeps after the pivot.
-- **`CONTRIBUTING.md`** — short guide for adding helpers (lite + robust).
+- **`CONTRIBUTING.md`** — short guide for adding helpers (annotate + generate).
 
 ### Notes (playbook era, now deprecated)
 
