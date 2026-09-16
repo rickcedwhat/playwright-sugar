@@ -1,6 +1,6 @@
 # Outcomes
 
-DSL for building outcome specs used by [`attemptAction`](/api/attempt-action) and [`Play.attempt()`](/api/play).
+DSL for building outcome specs used by [`attemptAction`](/api/attempt-action) (and the deprecated Playbook `Play.attempt()` API).
 
 ## Outcomes.success
 
@@ -68,5 +68,5 @@ All locator-bearing outcomes accept:
 | Form | When to use |
 |---|---|
 | `page.getByText('Done')` | Page is in scope (direct `attemptAction` usage) |
-| `p => p.getByText('Done')` | Inside `Play.attempt()` — page resolved at run time |
-| `(p, ctx) => p.getByText(ctx['label'] as string)` | Need Playbook context values |
+| `p => p.getByText('Done')` | Page resolved later (e.g. factory / playbook-style helpers) |
+| `(p, ctx) => p.getByText(ctx['label'] as string)` | Need values from a shared context object |
