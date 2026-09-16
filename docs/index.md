@@ -28,6 +28,9 @@ features:
   - title: Smart Scrolling
     details: "Strategy-based search for virtualized and infinite-scroll lists."
     link: /api/find-by-scrolling
+  - title: Full API tour
+    details: "Every helper with a one-liner and when-to-use note — skim before you keep or cut."
+    link: /api/
 ---
 
 ::: warning Alpha
