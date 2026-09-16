@@ -12,6 +12,7 @@ Thanks for helping — especially if you are adding one or two focused helpers.
 - Re-export from `src/index.ts`
 - Add a short API note under `docs/api/` when the helper is ready for docs
 - Register the helper in `scripts/generate-snippets.mjs` `MANIFEST` if it should ship a lite snippet
+- Lite snippets must stay **standalone**: after generation they may only import `@playwright/test` (enforced by `snippets:check`)
 
 ## What does not belong in the published API
 

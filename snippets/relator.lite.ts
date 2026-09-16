@@ -5,6 +5,7 @@
  *
  * Lite copy-paste relator. Same core behavior as the package
  * export; robust-only diagnostics and extras are stripped.
+ * Standalone: imports @playwright/test only (no other sugar helpers).
  */
 import type { Locator } from '@playwright/test';
 
