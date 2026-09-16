@@ -65,7 +65,7 @@ test.describe('Playwright Simple POC', () => {
     const anchor = page.getByText('User #2');
     const target = page.locator('input.status');
 
-    await relator(anchor, target, page.locator('div.row')).fill('Active');
+    await relator(target, anchor, page.locator('div.row')).fill('Active');
 
     const val1 = await page.locator('#row1 input.status').inputValue();
     const val2 = await page.locator('#row2 input.status').inputValue();
@@ -89,7 +89,7 @@ test.describe('Playwright Simple POC', () => {
     const anchor = page.getByText('Pro Plan');
     const target = page.getByRole('button', { name: 'Buy' });
 
-    const buyButton = relator(anchor, target);
+    const buyButton = relator(target, anchor);
     await buyButton.highlight();
     await buyButton.click();
 
@@ -111,12 +111,45 @@ test.describe('Playwright Simple POC', () => {
     const anchor = dialog.getByText('Alice');
     const target = dialog.getByRole('button', { name: 'Delete' });
 
-    const btn = relator(anchor, target);
+    const btn = relator(target, anchor);
 
     // Must resolve to the button inside the dialog, not the one outside it
     await expect(btn).toHaveCount(1);
     const isInsideDialog = await btn.evaluate(el => el.closest('dialog') !== null);
     expect(isInsideDialog).toBe(true);
+  });
+
+  test('relator multi-anchor narrows when neither anchor alone is unique', async ({ page }) => {
+    await page.setContent(`
+      <div class="row">
+        <span class="name">Alice</span>
+        <span class="role">Admin</span>
+        <button>Edit</button>
+      </div>
+      <div class="row">
+        <span class="name">Alice</span>
+        <span class="role">Viewer</span>
+        <button>Edit</button>
+      </div>
+      <div class="row">
+        <span class="name">Bob</span>
+        <span class="role">Admin</span>
+        <button>Edit</button>
+      </div>
+    `);
+
+    const target = page.getByRole('button', { name: 'Edit' });
+    const btn = relator(target, [
+      page.getByText('Alice', { exact: true }),
+      page.getByText('Viewer', { exact: true }),
+    ]);
+
+    await expect(btn).toHaveCount(1);
+    await expect(btn).toHaveText('Edit');
+    const role = await btn.evaluate(el =>
+      el.closest('.row')?.querySelector('.role')?.textContent,
+    );
+    expect(role).toBe('Viewer');
   });
 
   test('clickToOpen should retry if target missing', async ({ page }) => {
