@@ -17,6 +17,8 @@ pnpm run snippets:check      # fail if out of date (CI + prepublish)
 
 Lite keeps the same core algorithm; robust-only logs, richer errors, and advanced options are stripped.
 
+**Standalone imports:** snippets may only import from `@playwright/test`. No relative `./` imports and no other sugar helpers — so QAs can paste one file into their repo. If a helper needs another sugar module, either omit that import for lite (`sugar-full-only` + `sugar-lite-replace` to inline) or do not add it to the generator manifest.
+
 | Helper | Snippet | Source |
 |--------|---------|--------|
 | `attemptAction` / `detectState` | [`attemptAction.lite.ts`](./attemptAction.lite.ts) | `src/attemptAction.ts` |

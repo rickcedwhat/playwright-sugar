@@ -13,6 +13,10 @@
  *
  *   // sugar-lite-replace: <code>    — emit <code> only in the lite snippet
  *
+ * Import rule: generated snippets may only import from `@playwright/test`
+ * (and type-only / value imports from that package). No relative paths, no
+ * `@rickcedwhat/*`, no other sugar helpers — snippets must be drop-in alone.
+ *
  * Usage:
  *   node scripts/generate-snippets.mjs           # write snippets/
  *   node scripts/generate-snippets.mjs --check   # exit 1 if snippets are stale
@@ -146,6 +150,47 @@ function collapseBlankLines(text) {
   return text.replace(/\n{3,}/g, '\n\n');
 }
 
+/** Allowed module specifiers in lite snippets. */
+const ALLOWED_IMPORT_SPECIFIERS = new Set(['@playwright/test']);
+
+/**
+ * Collect `from '…'` / `from "…"` module specifiers (import and export-from).
+ * @param {string} code
+ * @returns {string[]}
+ */
+export function collectImportSpecifiers(code) {
+  const specs = [];
+  const re =
+    /\b(?:import|export)\s+(?:type\s+)?(?:[\s\S]*?)\s+from\s*['"]([^'"]+)['"]/g;
+  let m;
+  while ((m = re.exec(code)) !== null) {
+    specs.push(m[1]);
+  }
+  // Side-effect imports: import 'x'
+  const side = /\bimport\s*['"]([^'"]+)['"]/g;
+  while ((m = side.exec(code)) !== null) {
+    specs.push(m[1]);
+  }
+  return specs;
+}
+
+/**
+ * @param {string} snippetPath
+ * @param {string} code — body or full file
+ */
+export function assertSnippetImportsAllowed(snippetPath, code) {
+  const bad = collectImportSpecifiers(code).filter(
+    (spec) => !ALLOWED_IMPORT_SPECIFIERS.has(spec)
+  );
+  if (bad.length === 0) return;
+  const unique = [...new Set(bad)];
+  throw new Error(
+    `${snippetPath}: lite snippets may only import from ${[...ALLOWED_IMPORT_SPECIFIERS].join(', ')}. ` +
+      `Forbidden: ${unique.map((s) => JSON.stringify(s)).join(', ')}. ` +
+      `Wrap sugar-internal imports in sugar-full-only (or inline via sugar-lite-replace) so the snippet stays standalone.`
+  );
+}
+
 /**
  * @param {{ source: string, snippet: string, title: string }} entry
  * @param {string} body
@@ -159,6 +204,7 @@ function withBanner(entry, body) {
     ` *\n` +
     ` * Lite copy-paste ${entry.title}. Same core behavior as the package\n` +
     ` * export; robust-only diagnostics and extras are stripped.\n` +
+    ` * Standalone: imports @playwright/test only (no other sugar helpers).\n` +
     ` */\n` +
     body
   );
@@ -169,6 +215,7 @@ function generateAll() {
     const abs = path.join(root, entry.source);
     const raw = fs.readFileSync(abs, 'utf8');
     const body = stripFullOnly(raw);
+    assertSnippetImportsAllowed(entry.snippet, body);
     const content = withBanner(entry, body);
     return { entry, content };
   });
@@ -176,7 +223,13 @@ function generateAll() {
 
 function main() {
   const check = process.argv.includes('--check');
-  const results = generateAll();
+  let results;
+  try {
+    results = generateAll();
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : e);
+    process.exit(1);
+  }
   let stale = false;
 
   for (const { entry, content } of results) {
