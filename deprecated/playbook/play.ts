@@ -6,10 +6,10 @@ import {
   type AttemptActionOptions,
   type AttemptResolution,
   type Outcome,
-} from './attemptAction.js';
-import type { OutcomeSpec } from './outcomes.js';
+} from '../../src/attemptAction.js';
+import type { OutcomeSpec } from '../../src/outcomes.js';
 
-export type { AttemptActionOptions } from './attemptAction.js';
+export type { AttemptActionOptions } from '../../src/attemptAction.js';
 
 /**
  * Helper to explicitly attach a name to a function for automatic logging when

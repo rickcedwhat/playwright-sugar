@@ -61,9 +61,7 @@ function failureOutcome(
  * However, calling `Outcomes.timeout(name, { isSuccess: true })` overrides this behavior, marking `isSuccess: true`.
  * This changes control flow by designating the timeout as a successful outcome. This is useful when expecting a state
  * *not* to occur or when a timeout is the desired target outcome (e.g. verifying a modal remains closed).
- * This success-override allows subsequent success-branching in Play's execution, satisfies the Director's assertion
- * checks (e.g., `assertCan`), and avoids triggering retry/error recovery cycles or cleanups that consume `isSuccess`
- * and `isTimeoutOutcome`.
+ * Useful when a timeout is the desired branch (e.g. verifying a modal remains closed) without treating it as failure.
  *
  * @example
  * // Default: timeout is treated as a failure

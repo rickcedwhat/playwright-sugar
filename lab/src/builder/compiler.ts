@@ -143,8 +143,17 @@ export function compilePlaybook(
   edges: Edge[]
 ): string {
   const sequential = getSequentialNodes(nodes, edges);
-  let code = `import { Play, Playbook, Outcomes } from '@rickcedwhat/playwright-sugar';\n`;
-  code += `import type { Page, Locator } from '@playwright/test';\n\n`;
+  let code = `/**
+ * Sugar Lab playbook export (experimental).
+ * Download ships a zip with this file plus play.ts / playbook.ts (standalone).
+ * Runtime helpers resolve via @rickcedwhat/playwright-sugar + local ./play / ./playbook.
+ */
+import { Outcomes } from '@rickcedwhat/playwright-sugar';
+import type { Page, Locator } from '@playwright/test';
+import { Play } from './play.js';
+import { Playbook } from './playbook.js';
+
+`;
   code += `export const ${toSafeIdentifier(playbookName.toLowerCase())}Pb = new Playbook(${JSON.stringify(playbookName)}, {\n`;
   code += `  ${toSafeIdentifier(playName)}: () =>\n`;
   code += `    new Play()\n`;

@@ -1,3 +1,12 @@
+/**
+ * AUTO-GENERATED — do not edit by hand.
+ * Source: src/clickToOpen.ts
+ * Regenerate: pnpm run snippets:generate
+ *
+ * Lite copy-paste clickToOpen. Same core behavior as the package
+ * export; robust-only diagnostics and extras are stripped.
+ * Standalone: imports @playwright/test only (no other sugar helpers).
+ */
 import type { Locator } from '@playwright/test';
 
 /**
@@ -28,8 +37,6 @@ export async function clickToOpen(
         throw new Error(`clickToOpen failed after ${maxRetries} retries. Target never appeared.`);
       }
 
-      // sugar-full-only
-      console.log(`clickToOpen: Target not visible after click (attempt ${i + 1}). Retrying in 100ms...`);
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }

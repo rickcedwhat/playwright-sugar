@@ -7,19 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **`bindPlaybooks(ctx, catalog, opts?)`** — optional `{ name }` calls two-argument `withCtx(name, ctx)` per entry for readable multi-page logs.
-- **`Playbook.withCtx(name, ctx)` overload**, **`logScope()`**, **`runLabel(playName)`** — log prefix separate from registry `Playbook.name`; `Director` / `Play` labels use `scope > PlaybookName > playName`.
-- **Package entry** — explicit `bindPlaybooks` / `BoundPlaybookCatalog` / `BindPlaybooksOptions` re-exports from the root module.
+## [0.3.0] - 2026-09-16
 
 ### Changed (breaking)
 
-- **`Play` / `PlayCtx`** — detect and attempt resolutions are no longer stored on `ctx.state` / `ctx.result` or on `ctx`. Use the **third callback argument** `(page, ctx, outcome)` on every act (`outcome` is `undefined` until after a `.detect()` or `.attempt()`). Shape: `{ name, isSuccess, locator?, payload? }` where `payload` is the winning branch’s `onOutcome` return. **`Play.run()`** returns `{ ctx, lastOutcome? }` so callers (e.g. `Director`) can read the final resolution without mutating context.
-- **`attemptAction` / `detectPageState`** — return value uses **`payload`** (not `data`) and may include **`locator`** when a locator-based outcome wins. Soft timeout and action-error fallbacks **do not invoke `onOutcome`** (no winning locator; previously `onOutcome` could run with a null locator).
-- **`Director` / `PlayResult`** — `PlayResult.data` is replaced by **`PlayResult.payload`**, aligned with `PlayOutcome.payload`.
-- **`attemptAction`** — signature is now positional: `attemptAction(action, outcomes, opts?)`. The previous single-object parameter is removed. Use `async () => {}` as the action when you only need to poll outcomes (or use **`detectPageState`**).
-- **`Play.attempt`** — optional third/fourth argument is now `AttemptActionOptions` (e.g. `{ timeout: 5000 }`) instead of a bare `timeout` number, aligned with `attemptAction`.
+- **Public API pivot** — package exports are QA helpers only (`attemptAction`, `detectState`, `Outcomes`, `relator`, `verifiedFill`, `clickToOpen`, `clickToURL`, `findByScrolling`, `hoverMenu`, `watchFor`, `pageTag`, strategies). **`Play` / `Playbook` / `Director` / `bindPlaybooks` are removed from the published barrel** and live under `deprecated/playbook/` for a possible future package.
+- Docs and roadmap updated for **lite (snippets/) + robust (src/)** helper forms; MIT `LICENSE` and npm metadata added for publish.
+
+### Added
+
+- **`snippets/`** — copy-paste lite variants of `attemptAction`, `verifiedFill`, `clickToOpen`, and `relator`, **generated** from annotated `src/` via `pnpm run snippets:generate` (`snippets:check` in CI / prepublish).
+- **`docs/ISSUE_TRIAGE.md`** — recommended closes/keeps after the pivot.
+- **`CONTRIBUTING.md`** — short guide for adding helpers (annotate + generate).
+
+### Notes (playbook era, now deprecated)
+
+Historical behavior still documented in `deprecated/playbook/`: `bindPlaybooks`, `Playbook.withCtx(name, ctx)`, Play third-arg outcomes, positional `attemptAction`.
 
 ## [0.2.0] - 2026-05-08
 

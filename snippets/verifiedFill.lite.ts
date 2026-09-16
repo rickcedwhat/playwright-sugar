@@ -1,3 +1,12 @@
+/**
+ * AUTO-GENERATED — do not edit by hand.
+ * Source: src/verifiedFill.ts
+ * Regenerate: pnpm run snippets:generate
+ *
+ * Lite copy-paste verifiedFill. Same core behavior as the package
+ * export; robust-only diagnostics and extras are stripped.
+ * Standalone: imports @playwright/test only (no other sugar helpers).
+ */
 import type { Locator } from '@playwright/test';
 import { expect } from '@playwright/test';
 
@@ -26,12 +35,6 @@ export async function verifiedFill(
     try {
       await expect(locator).toHaveValue(value, { timeout });
     } catch (e) {
-      // sugar-full-only-begin
-      console.warn(
-        '[verifiedFill] Value did not stick on first fill; retrying once. ' +
-          'If this is frequent, the field may be fighting SPA state updates.'
-      );
-      // sugar-full-only-end
       await locator.fill(value);
       await locator.blur();
       await expect(locator).toHaveValue(value, { timeout });

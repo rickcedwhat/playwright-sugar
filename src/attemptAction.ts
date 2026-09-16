@@ -1,28 +1,39 @@
 import type { Locator } from '@playwright/test';
 
+// sugar-full-only-begin
 export type AsyncLocatorFn = () => Locator | null | Promise<Locator | null>;
+// sugar-full-only-end
 
 export type Outcome = {
   name: string;
+  // sugar-full-only-begin
   locator?: Locator | AsyncLocatorFn;
+  // sugar-full-only-end
+  // sugar-lite-replace: locator?: Locator;
   isSuccess: boolean;
   isTimeoutOutcome?: boolean;
   isActionErrorOutcome?: boolean;
+  // sugar-full-only-begin
   onOutcome?: (winner: Locator) => Promise<unknown>;
+  // sugar-full-only-end
 };
 
-/** Resolution from {@link attemptAction} / {@link detectState} — maps to {@link PlayOutcome}. */
+/** Resolution from {@link attemptAction} / {@link detectState}. */
 export type AttemptResolution = {
   isSuccess: boolean;
   outcome: string;
+  // sugar-full-only-begin
   payload?: unknown;
+  // sugar-full-only-end
   locator?: Locator;
 };
 
-/** Options for `attemptAction` / `Play.attempt` — extend with future flags without breaking the positional API. */
+/** Options for `attemptAction` — extend with future flags without breaking the positional API. */
 export type AttemptActionOptions = {
   timeout?: number;
+  // sugar-full-only-begin
   ambiguityBufferMs?: number;
+  // sugar-full-only-end
 };
 
 export async function attemptAction(
@@ -39,15 +50,21 @@ export async function attemptAction(
     await action();
   } catch (e: any) {
     actionError = e;
+    // sugar-full-only
     console.warn(`[attemptAction] Trigger action failed, proceeding to outcome detection. Error: ${e.message}`);
   }
 
   const startTime = Date.now();
+  // sugar-full-only-begin
   const strictModeErrorsLogged = new Set<string>();
+  // sugar-full-only-end
 
   // Polling Phase
+  // sugar-full-only-begin
   const bufferMs = opts?.ambiguityBufferMs ?? 150;
-  
+  // sugar-full-only-end
+  // sugar-lite-replace: const bufferMs = 150;
+
   type Winner = { outcome: Outcome; locator: Locator };
   let firstWinner: Winner | null = null;
   const winners: Winner[] = [];
@@ -56,18 +73,22 @@ export async function attemptAction(
     while (Date.now() - startTime < timeout) {
       try {
         if (!o.locator) return null;
-        
+
         let actualLocator: Locator | null = null;
+        // sugar-full-only-begin
         if (typeof o.locator === 'function') {
           actualLocator = await o.locator();
         } else {
           actualLocator = o.locator;
         }
+        // sugar-full-only-end
+        // sugar-lite-replace: actualLocator = o.locator;
 
         if (actualLocator && await actualLocator.isVisible()) {
           return { outcome: o, locator: actualLocator };
         }
       } catch (error: unknown) {
+        // sugar-full-only-begin
         const errorMsg = error instanceof Error ? error.message : '';
         const isStrictModeError =
           errorMsg.includes("strict mode violation") ||
@@ -93,8 +114,9 @@ ${errorMsg}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
         }
+        // sugar-full-only-end
       }
-      
+
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     return null;
@@ -107,7 +129,7 @@ ${errorMsg}
     }
 
     let resolvedCount = 0;
-    let bufferTimer: NodeJS.Timeout | null = null;
+    let bufferTimer: ReturnType<typeof setTimeout> | null = null;
 
     candidatePromises.forEach(p => {
       p.then(winner => {
@@ -119,7 +141,7 @@ ${errorMsg}
             bufferTimer = setTimeout(() => resolve(), bufferMs);
           }
         }
-        
+
         if (resolvedCount === candidatePromises.length) {
           if (bufferTimer) clearTimeout(bufferTimer);
           resolve();
@@ -139,7 +161,8 @@ ${errorMsg}
   if (winners.length === 1) {
     const winner = winners[0];
     if (!winner) throw new Error('Winner vanished during processing');
-    
+
+    // sugar-full-only-begin
     let payload: unknown | undefined = undefined;
     if (winner.outcome.onOutcome && winner.locator) {
       payload = await winner.outcome.onOutcome(winner.locator);
@@ -151,6 +174,12 @@ ${errorMsg}
     if (payload !== undefined) resolution.payload = payload;
     if (winner.locator != null) resolution.locator = winner.locator;
     return resolution;
+    // sugar-full-only-end
+    // sugar-lite-replace: return {
+    // sugar-lite-replace:   isSuccess: winner.outcome.isSuccess,
+    // sugar-lite-replace:   outcome: winner.outcome.name,
+    // sugar-lite-replace:   locator: winner.locator,
+    // sugar-lite-replace: };
   }
 
   // Timeout Handling — no visible winner; do not run onOutcome (no winning locator).
@@ -166,6 +195,7 @@ ${errorMsg}
     };
   }
 
+  // sugar-full-only-begin
   const debugList = normalizedOutcomes
     .map(
       (o) =>
@@ -179,19 +209,30 @@ ${errorMsg}
   }
 
   throw new Error(errorMessage);
+  // sugar-full-only-end
+  // sugar-lite-replace: const checked = normalizedOutcomes.map((o) => o.name).join(', ');
+  // sugar-lite-replace: let errorMessage = `Action timed out after ${timeout}ms. Checked: ${checked}`;
+  // sugar-lite-replace: if (actionError) {
+  // sugar-lite-replace:   errorMessage += `\n\nNOTE: The action also failed with: ${actionError.message}`;
+  // sugar-lite-replace: }
+  // sugar-lite-replace: throw new Error(errorMessage);
 }
 
 export async function detectState(params: {
   outcomes: Outcome[];
   timeout?: number;
+  // sugar-full-only-begin
   ambiguityBufferMs?: number;
+  // sugar-full-only-end
 }) {
   return attemptAction(
     async () => {},
     params.outcomes,
-    { 
+    {
       timeout: params.timeout ?? 5000,
+      // sugar-full-only-begin
       ...(params.ambiguityBufferMs !== undefined && { ambiguityBufferMs: params.ambiguityBufferMs })
+      // sugar-full-only-end
     }
   );
 }

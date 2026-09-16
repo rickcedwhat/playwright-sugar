@@ -1,29 +1,28 @@
-# 🚀 Playwright Sugar Roadmap (v0.1.0) 🗺️
+# Playwright Sugar Roadmap
 
-This document tracks future "Sugar" helpers and architectural improvements planned for the library.
+Sugar stays focused on **small QA helpers** with lite (copy-paste) and robust (package) forms. The playbook/RBAC framework is parked under `deprecated/playbook/` for a possible separate repo.
 
-## 🚀 Upcoming Helpers
+## Direction
 
-### 🧹 Passive Toast Cleaner (`withCleaner`)
-- **Problem**: `addLocatorHandler` only triggers during a blocked action. Passive operations (like screenshots) or fast-moving tests can still be obstructed by non-blocking toasts or warnings.
-- **Goal**: A wrapper that proactively checks for and clears known obstructions before executing a block of code.
+- Prefer primitives QAs can drop into any Playwright suite
+- Grow debug quality in package exports (errors, logs, hints) — see issue #34
+- Keep untested helpers (`hoverMenu`, `pageTag`, `watchFor`, etc.) until exercised; do not delete on sight
+- Publish `@rickcedwhat/playwright-sugar` to npm with a stable public surface (no Director/Play/Playbook)
 
-### ⚖️ Stability Helper (`waitForStable`)
-- **Problem**: Playwright clicks the center of a bounding box, but if the element is animating or shifting (e.g. a sliding modal), the click might land on the "old" coordinates.
-- **Goal**: A utility that verifies an element's position has been unchanged for a short window (e.g. 100ms) before allowing an interaction.
+## Upcoming helpers
 
-### 📍 Atomic Navigation (`clickToURL`)
-- **Problem**: Separating `click()` and `waitForURL()` makes it harder to provide rich error messages when navigation fails.
-- **Goal**: An `attemptAction` based wrapper that clicks and confirms the landed URL in one step.
+### Passive toast cleaner (`withCleaner`)
+Proactively clear known overlays before a block of code (beyond `addLocatorHandler`).
 
-### 🤫 Network Silence (`waitForSilence`)
-- **Problem**: Standard `networkidle` is often too slow or never fires in apps with constant polling.
-- **Goal**: A helper that waits for a specific duration of network inactivity or for specific "Busy" APIs to finish.
+### Stability helper (`waitForStable`)
+Wait until an element’s box is unchanged briefly before clicking (animation-safe).
 
-## 🏗️ Architectural Ideas
-- **Director-Registered Routines**: Decouple multi-play workflows (like `ensureExists`) from the Director core by registering workflows as routines. Tracked in [issue #42](https://github.com/rickcedwhat/playwright-sugar/issues/42).
-- **Global Error Handling**: Automatically capturing browser logs and screenshots ONLY on `attemptAction` failures.
-- **Automatic Retries for `verifiedFill`**: Enhancing `verifiedFill` to handle more complex state-reversion cases in specific frameworks.
-- **Plugin System**: Allowing users to register global "Cleaners" that run before every `attemptAction`.
-- **Custom Strategies Registry**: A global way to register and reuse scrolling/finding strategies.
-- **Assertion-level Retries**: Expand `RecheckStrategy` to `assertCan` and `assertCannot` to retry checks (e.g., verifying deletion) without playbook-level retry configuration.
+### Network silence (`waitForSilence`)
+Wait for a quiet window of network activity without full `networkidle`.
+
+### Dual-form coverage
+Finish lite snippets for remaining package helpers (`hoverMenu`, `watchFor`, `findByScrolling`, `clickToURL`, `pageTag`).
+
+## Deferred (deprecated playbook folder)
+
+Director collect mode, playbook visualizers, registered routines, and related RBAC tooling — see `docs/ISSUE_TRIAGE.md` and `deprecated/playbook/`. Revisit only if spinning up a separate playbook package.
