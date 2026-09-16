@@ -145,9 +145,8 @@ export function compilePlaybook(
   const sequential = getSequentialNodes(nodes, edges);
   let code = `/**
  * Sugar Lab playbook export (experimental).
- * \`Play\` / \`Playbook\` are NOT published on npm — vendor them from
- * https://github.com/rickcedwhat/playwright-sugar/tree/main/deprecated/playbook
- * (place play.js / playbook.js next to this file, or adjust the import paths).
+ * Download ships a zip with this file plus play.ts / playbook.ts (standalone).
+ * Runtime helpers resolve via @rickcedwhat/playwright-sugar + local ./play / ./playbook.
  */
 import { Outcomes } from '@rickcedwhat/playwright-sugar';
 import type { Page, Locator } from '@playwright/test';

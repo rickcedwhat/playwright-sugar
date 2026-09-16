@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Editor } from '@monaco-editor/react';
+import { buildPlaybookExportZip } from './playbookExportBundle';
 
 interface Props {
   code: string;
@@ -20,12 +21,14 @@ export default function CodePreview({ code, playbookName }: Props) {
   };
 
   const handleDownload = () => {
-    const filename = `${playbookName.toLowerCase() || 'custom'}Playbook.ts`;
-    const blob = new Blob([code], { type: 'text/typescript;charset=utf-8;' });
+    const base = playbookName.toLowerCase() || 'custom';
+    const playbookFileName = `${base}Playbook.ts`;
+    const zipName = `${base}-playbook-export.zip`;
+    const blob = buildPlaybookExportZip({ playbookFileName, generatedCode: code });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', filename);
+    link.setAttribute('download', zipName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -58,6 +61,7 @@ export default function CodePreview({ code, playbookName }: Props) {
           <div style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff' }}>Generated Code</div>
           <div style={{ fontSize: '11px', color: '#888888', marginTop: '2px' }}>
             {playbookName.toLowerCase() || 'custom'}Playbook.ts
+            <span style={{ opacity: 0.7 }}> · Download = zip + play.ts + playbook.ts</span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -88,7 +92,7 @@ export default function CodePreview({ code, playbookName }: Props) {
               fontWeight: 500,
             }}
           >
-            Download
+            Download zip
           </button>
         </div>
       </div>
