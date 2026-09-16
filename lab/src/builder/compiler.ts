@@ -143,8 +143,18 @@ export function compilePlaybook(
   edges: Edge[]
 ): string {
   const sequential = getSequentialNodes(nodes, edges);
-  let code = `// Deprecated playbook API — sources in repo deprecated/playbook/\nimport { Play, Playbook, Outcomes } from '@rickcedwhat/playwright-sugar';\n`;
-  code += `import type { Page, Locator } from '@playwright/test';\n\n`;
+  let code = `/**
+ * Sugar Lab playbook export (experimental).
+ * \`Play\` / \`Playbook\` are NOT published on npm — vendor them from
+ * https://github.com/rickcedwhat/playwright-sugar/tree/main/deprecated/playbook
+ * (place play.js / playbook.js next to this file, or adjust the import paths).
+ */
+import { Outcomes } from '@rickcedwhat/playwright-sugar';
+import type { Page, Locator } from '@playwright/test';
+import { Play } from './play.js';
+import { Playbook } from './playbook.js';
+
+`;
   code += `export const ${toSafeIdentifier(playbookName.toLowerCase())}Pb = new Playbook(${JSON.stringify(playbookName)}, {\n`;
   code += `  ${toSafeIdentifier(playName)}: () =>\n`;
   code += `    new Play()\n`;

@@ -75,7 +75,7 @@ const result = await attemptAction(
 );
 ```
 
-Prefer **`detectPageState`** (below) for this pattern — it wraps the same engine with a clearer name.
+Prefer **`detectState`** (below) for this pattern — it wraps the same engine with a clearer name.
 
 ### Action error vs timeout
 
@@ -87,18 +87,18 @@ const result = await attemptAction(
   [
     Outcomes.success(page.getByText('Done')),
     Outcomes.actionError('button-missing'),
-    Outcomes.timeout(3000),
+    Outcomes.timeout('no-done'),
   ],
 );
 // result.outcome === 'button-missing' when the click throws
 ```
 
-## `detectPageState`
+## `detectState`
 
-For “wait until one of these locators wins” without running an action, use `detectPageState` (implemented with a no-op `attemptAction`):
+For “wait until one of these locators wins” without running an action, use `detectState` (implemented with a no-op `attemptAction`):
 
 ```ts
-const result = await detectPageState({
+const result = await detectState({
   outcomes: [/* ... */],
   timeout: 5000,
 });

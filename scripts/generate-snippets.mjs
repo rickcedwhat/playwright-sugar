@@ -171,6 +171,11 @@ export function collectImportSpecifiers(code) {
   while ((m = side.exec(code)) !== null) {
     specs.push(m[1]);
   }
+  // Dynamic imports: import('./helper.js') / import("./helper.js")
+  const dyn = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+  while ((m = dyn.exec(code)) !== null) {
+    specs.push(m[1]);
+  }
   return specs;
 }
 
