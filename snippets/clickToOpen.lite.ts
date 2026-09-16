@@ -1,30 +1,42 @@
 /**
- * Lite `clickToOpen` — copy into your repo.
- * Click until a target becomes visible. Package export adds retry logging and clearer errors.
+ * AUTO-GENERATED — do not edit by hand.
+ * Source: src/clickToOpen.ts
+ * Regenerate: pnpm run snippets:generate
+ *
+ * Lite copy-paste clickToOpen. Same core behavior as the package
+ * export; robust-only diagnostics and extras are stripped.
  */
 import type { Locator } from '@playwright/test';
 
+/**
+ * Guaranteed Side-Effect Click
+ * Retries the click if the target element doesn't appear.
+ */
 export async function clickToOpen(
   trigger: Locator,
   target: Locator,
   options: { maxRetries?: number; timeout?: number; subTimeout?: number } = {}
 ): Promise<void> {
-  const { maxRetries = 3, timeout = 30_000, subTimeout = 2_000 } = options;
-  const start = Date.now();
+  const { maxRetries = 3, timeout = 30000, subTimeout = 2000 } = options;
+  const startTime = Date.now();
 
   for (let i = 0; i <= maxRetries; i++) {
     try {
       await trigger.click();
+
+      // Wait for target with a short sub-timeout
       await target.waitFor({ state: 'visible', timeout: subTimeout });
-      return;
-    } catch {
-      if (Date.now() - start > timeout) {
-        throw new Error(`clickToOpen timed out after ${timeout}ms`);
+      return; // Success
+    } catch (e) {
+      if (Date.now() - startTime > timeout) {
+        throw new Error(`clickToOpen timed out after ${timeout}ms. Target never appeared.`);
       }
+
       if (i === maxRetries) {
-        throw new Error(`clickToOpen failed after ${maxRetries} retries`);
+        throw new Error(`clickToOpen failed after ${maxRetries} retries. Target never appeared.`);
       }
-      await new Promise((r) => setTimeout(r, 100));
+
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 }

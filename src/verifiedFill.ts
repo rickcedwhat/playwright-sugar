@@ -4,7 +4,7 @@ import { expect } from '@playwright/test';
 /**
  * Fills a field and verifies that the value actually stuck.
  * Handles cases where React/Vue state lag might cause values to revert.
- * 
+ *
  * @param locator - The field to fill
  * @param value - The value to enter
  * @param params.validate - Whether to verify the value after filling (default: true)
@@ -18,7 +18,7 @@ export async function verifiedFill(
   const { validate = true, timeout = 5000 } = params;
 
   await locator.fill(value);
-  
+
   // Blur the field to trigger any 'change' or 'blur' events that might sync state
   await locator.blur();
 
@@ -26,10 +26,12 @@ export async function verifiedFill(
     try {
       await expect(locator).toHaveValue(value, { timeout });
     } catch (e) {
+      // sugar-full-only-begin
       console.warn(
         '[verifiedFill] Value did not stick on first fill; retrying once. ' +
           'If this is frequent, the field may be fighting SPA state updates.'
       );
+      // sugar-full-only-end
       await locator.fill(value);
       await locator.blur();
       await expect(locator).toHaveValue(value, { timeout });

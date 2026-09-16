@@ -26,6 +26,7 @@ export function relator(
       .locator(target);
   }
 
+  // sugar-full-only-begin
   void result.count().then(count => {
     if (count === 0) {
       console.warn(
@@ -37,6 +38,7 @@ export function relator(
   }).catch(() => {
     // ignore — locator may not be resolvable (page not yet navigated, etc.)
   });
+  // sugar-full-only-end
 
   return result;
 }
