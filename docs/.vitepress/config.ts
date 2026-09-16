@@ -10,7 +10,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Sugar Lab', link: '/guide/sugar-lab' },
-      { text: 'API', link: '/api/attempt-action' },
+      { text: 'API', link: '/api/' },
       { text: 'GitHub', link: 'https://github.com/rickcedwhat/playwright-sugar' }
     ],
     sidebar: [
@@ -23,14 +23,20 @@ export default defineConfig({
         ]
       },
       {
-        text: 'Core Helpers',
+        text: 'API',
         items: [
-          { text: 'attemptAction', link: '/api/attempt-action' },
+          { text: 'Helpers overview', link: '/api/' },
+          { text: 'attemptAction / detectState', link: '/api/attempt-action' },
           { text: 'Outcomes', link: '/api/outcomes' },
           { text: 'relator', link: '/api/relator' },
           { text: 'verifiedFill', link: '/api/verified-fill' },
           { text: 'clickToOpen', link: '/api/click-to-open' },
+          { text: 'clickToURL', link: '/api/click-to-url' },
           { text: 'findByScrolling', link: '/api/find-by-scrolling' },
+          { text: 'strategies', link: '/api/strategies' },
+          { text: 'hoverMenu', link: '/api/hover-menu' },
+          { text: 'watchFor', link: '/api/watch-for' },
+          { text: 'pageTag', link: '/api/page-tag' },
         ]
       }
     ],

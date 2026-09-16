@@ -28,8 +28,9 @@ const result = await attemptAction(
   [
     Outcomes.success(page.getByText('Deleted successfully')),
     Outcomes.failure(page.getByText('Permission denied')),
-    Outcomes.timeout(5000),
+    Outcomes.timeout('no-feedback'),
   ],
+  { timeout: 5000 },
 );
 
 if (result.isSuccess) {
