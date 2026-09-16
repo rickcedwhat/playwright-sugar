@@ -45,8 +45,8 @@ Use `relator` to find an element relative to a unique anchor — avoids fragile 
 import { relator } from '@rickcedwhat/playwright-sugar';
 
 const editBtn = relator(
-  page.getByText('Invoice #42'),
   page.getByRole('button', { name: 'Edit' }),
+  page.getByText('Invoice #42'),
 );
 await editBtn.click();
 ```

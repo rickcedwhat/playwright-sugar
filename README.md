@@ -45,8 +45,8 @@ Find a control relative to a semantic anchor (shared parent / container).
 import { relator } from '@rickcedwhat/playwright-sugar';
 
 await relator(
+  page.getByRole('button', { name: 'Buy' }),
   page.getByText('Pro Plan'),
-  page.getByRole('button', { name: 'Buy' })
 ).click();
 ```
 
