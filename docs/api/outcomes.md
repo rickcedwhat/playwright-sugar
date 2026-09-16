@@ -69,4 +69,4 @@ All locator-bearing outcomes accept:
 |---|---|
 | `page.getByText('Done')` | Page is in scope (direct `attemptAction` usage) |
 | `p => p.getByText('Done')` | Inside `Play.attempt()` — page resolved at run time |
-| `(p, ctx) => p.getByText(ctx['label'] as string)` | Need Playbook context values |
+| `(p, ctx) => p.getByText(ctx['label'] as string)` | Need values from a shared context object |

@@ -37,6 +37,7 @@ declare module '@playwright/test' {
 `;
 
 export const playwrightSugarDts = `
+/** Ambient types for Sugar Lab. Play/Playbook/Director mirror deprecated/playbook (not published). */
 declare module '@rickcedwhat/playwright-sugar' {
   import { Page, Locator } from '@playwright/test';
 

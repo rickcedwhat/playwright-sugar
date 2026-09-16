@@ -1,29 +1,26 @@
-# @rickcedwhat/playwright-sugar 🍬
+# @rickcedwhat/playwright-sugar
 
-A lightweight utility library to eliminate flakiness, reduce boilerplate, and handle complex branching logic in Playwright tests. 
+Small Playwright helpers that make QA lives easier: less flakiness, less boilerplate, clearer failures.
 
-Part of the **@rickcedwhat** suite of smart Playwright tools.
-
-## Why Playwright Sugar?
-
-Standard Playwright is powerful, but real-world testing often involves:
-- **Branching Logic**: "If a modal appears, close it; if the page loads, continue."
-- **RBAC Complexity**: "Some users see the button, others don't, others get an error toast."
-- **Flaky Interactions**: Clicks that happen before an element is truly "ready" or stable.
-- **Scoping Issues**: Finding the right button inside the *correct* card or row without brittle selectors.
-
-**Playwright Sugar** provides a "DX-first" layer to handle these patterns gracefully.
+Each helper aims for **two forms**:
+- **Lite** — copy-paste from [`snippets/`](./snippets) into your own repo (no dependency)
+- **Robust** — install the package for intelligent errors, logs, and shared fixes
 
 ## Installation
 
 ```bash
-npm install @rickcedwhat/playwright-sugar
+npm install -D @rickcedwhat/playwright-sugar
+# or
+pnpm add -D @rickcedwhat/playwright-sugar
 ```
 
-## Core API
+Requires `@playwright/test` as a peer dependency.
 
-### 1. `attemptAction` & `detectPageState`
-The crown jewel of the library. It races multiple outcomes against each other and handles action failures gracefully.
+## Core helpers
+
+### `attemptAction` & `detectState`
+
+Race multiple UI outcomes after an action (or with no action). Soft-triggers: if the click fails, detection still runs.
 
 ```typescript
 import { attemptAction, Outcomes } from '@rickcedwhat/playwright-sugar';
@@ -33,35 +30,29 @@ const { isSuccess, outcome } = await attemptAction(
   [
     Outcomes.success('Started', page.getByText('Job Started Successfully')),
     Outcomes.failure('Blocked', page.getByText('You do not have permission')),
-    Outcomes.actionError('RBAC: Button Missing') // Fallback if click fails
+    Outcomes.actionError('Button missing'),
   ]
 );
 ```
 
-**Features:**
-- **Soft Triggers**: If the `action` fails, it doesn't crash the test. It proceeds to check outcomes.
-- **Strict Mode Detection**: Automatically logs a rich ASCII warning if a locator matches multiple elements.
-- **Outcome DSL**: Use `Outcomes.success()`, `Outcomes.failure()`, etc., for clean, readable code.
+Copy-paste lite version: [`snippets/attemptAction.lite.ts`](./snippets/attemptAction.lite.ts)
 
----
+### `relator`
 
-### 2. `relator`
-A semantic relative locator that finds the **Lowest Common Ancestor (LCA)** automatically.
+Find a control relative to a semantic anchor (shared parent / container).
 
 ```typescript
 import { relator } from '@rickcedwhat/playwright-sugar';
 
-// Finds the "Buy" button inside the SAME card as the "Pro Plan" text.
 await relator(
-  page.getByText('Pro Plan'), 
+  page.getByText('Pro Plan'),
   page.getByRole('button', { name: 'Buy' })
 ).click();
 ```
 
----
+### `verifiedFill`
 
-### 3. `verifiedFill`
-Fills a field and verifies that the value actually stuck. Essential for modern SPAs with state-management lag.
+Fill a field and confirm the value stuck (SPA state lag).
 
 ```typescript
 import { verifiedFill } from '@rickcedwhat/playwright-sugar';
@@ -69,44 +60,20 @@ import { verifiedFill } from '@rickcedwhat/playwright-sugar';
 await verifiedFill(page.locator('#email'), 'user@example.com');
 ```
 
----
+### Also included
 
-### 4. `findByScrolling`
-Finds elements in virtualized or infinite-scroll lists by automatically scrolling and checking for visibility.
+`clickToOpen`, `clickToURL`, `findByScrolling`, `hoverMenu`, `watchFor`, `pageTag`, `Outcomes`, scroll/match strategies.
 
-```typescript
-import { findByScrolling } from '@rickcedwhat/playwright-sugar';
+## Deprecated: Play / Playbook / Director
 
-// Finds a row that is deep in an infinite scroll list
-const row = await findByScrolling(page.getByText('ID #999'), {
-  container: page.locator('.scroll-area'),
-  maxAttempts: 20
-});
+The RBAC-oriented playbook framework (`Play`, `Playbook`, `Director`) lives in [`deprecated/playbook/`](./deprecated/playbook) for a possible future package. It is **not** part of the published npm API.
 
-if (row) await row.click();
-```
+## Docs
 
----
-
-### 5. `clickToOpen`
-A robust wrapper for clicks that *must* result in a specific element appearing.
-
-```typescript
-import { clickToOpen } from '@rickcedwhat/playwright-sugar';
-
-await clickToOpen(
-  page.getByRole('button', { name: 'Open Settings' }),
-  page.locator('#settings-modal')
-);
-```
-
----
-
-## The @rickcedwhat Suite
-
-This library is designed to work alongside:
-- [**playwright-smart-library**](https://github.com/rickcedwhat/playwright-smart-library): LLM-powered element resolution.
-- [**playwright-smart-table**](https://github.com/rickcedwhat/playwright-smart-table): Advanced column-aware table interactions.
+- [Getting started](./docs/guide/getting-started.md)
+- [Lite vs robust helpers](./docs/guide/helper-forms.md)
+- [Roadmap](./ROADMAP.md)
 
 ## License
+
 MIT

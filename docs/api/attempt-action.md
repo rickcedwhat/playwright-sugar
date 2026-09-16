@@ -1,6 +1,6 @@
 # attemptAction
 
-Runs a **required** action, then waits for one of several named outcomes to appear. Returns the winning outcome rather than throwing in common cases, making it practical to branch on RBAC failures, toast messages, or missing UI elements.
+Runs a **required** action, then waits for one of several named outcomes to appear. Returns the winning outcome rather than throwing in common cases — useful for toasts, permission messages, missing controls, or other branching UI.
 
 ## Signature
 

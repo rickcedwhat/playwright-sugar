@@ -143,7 +143,7 @@ export function compilePlaybook(
   edges: Edge[]
 ): string {
   const sequential = getSequentialNodes(nodes, edges);
-  let code = `import { Play, Playbook, Outcomes } from '@rickcedwhat/playwright-sugar';\n`;
+  let code = `// Deprecated playbook API — sources in repo deprecated/playbook/\nimport { Play, Playbook, Outcomes } from '@rickcedwhat/playwright-sugar';\n`;
   code += `import type { Page, Locator } from '@playwright/test';\n\n`;
   code += `export const ${toSafeIdentifier(playbookName.toLowerCase())}Pb = new Playbook(${JSON.stringify(playbookName)}, {\n`;
   code += `  ${toSafeIdentifier(playName)}: () =>\n`;

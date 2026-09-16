@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: "Playwright Sugar",
-  description: "Sweet utilities for Playwright automation",
+  description: "Small Playwright helpers for QA — lite snippets and robust package exports",
   /** Keep `lab` script `build:embed` `--base` equal to this value plus `lab/`. */
   base: '/playwright-sugar/',
   themeConfig: {
@@ -18,6 +18,7 @@ export default defineConfig({
         text: 'Introduction',
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Lite vs robust', link: '/guide/helper-forms' },
           { text: 'Sugar Lab (live)', link: '/guide/sugar-lab' },
         ]
       },
@@ -30,15 +31,6 @@ export default defineConfig({
           { text: 'verifiedFill', link: '/api/verified-fill' },
           { text: 'clickToOpen', link: '/api/click-to-open' },
           { text: 'findByScrolling', link: '/api/find-by-scrolling' },
-        ]
-      },
-      {
-        text: 'Director API',
-        items: [
-          { text: 'Play', link: '/api/play' },
-          { text: 'Playbook', link: '/api/playbook' },
-          { text: 'Director', link: '/api/director' },
-          { text: 'SyncStrategy', link: '/api/sync-strategy' },
         ]
       }
     ],

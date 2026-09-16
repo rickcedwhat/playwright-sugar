@@ -2,6 +2,8 @@
 
 A Vite + React playground app for testing `@rickcedwhat/playwright-sugar` helpers against real-world UI patterns. It is a test fixture — not a product.
 
+The visual **Playbook builder** targets the deprecated `Play` / `Playbook` / `Director` API (see `/deprecated/playbook`). Ambient types in the builder still describe that API for local experimentation; it is not part of the published npm package.
+
 ## Running the lab
 
 ```bash
@@ -34,7 +36,7 @@ Example: `/?clear=1&seed=Demo&role=viewer`
 
 ## Scenarios
 
-### Datasets page — Issue #10 (Playbook / Director)
+### Datasets page
 
 | Route | URL |
 |---|---|
@@ -45,7 +47,7 @@ Example: `/?clear=1&seed=Demo&role=viewer`
 | **Empty state** — "No datasets" + "Empty dataset" button | Clear `localStorage` key `sugar-lab-datasets` and reload |
 | **Table state** — header, rows, "Dataset" button | Create at least one dataset |
 
-**Key selectors used by Issue #10 plays:**
+**Key selectors:**
 
 | Element | Selector |
 |---|---|
@@ -55,21 +57,9 @@ Example: `/?clear=1&seed=Demo&role=viewer`
 | Table create button | `page.getByRole('button', { name: 'Dataset', exact: true })` |
 | Dataset detail success | `page.getByText('This dataset is empty')` |
 | Row by name | `page.locator('tr:has-text("My Dataset")')` |
-| Row ellipsis menu | `page.locator('.lucide-ellipsis')` |
-| Rename menu item | `page.getByRole('menuitem', { name: 'Rename' })` |
-| Rename input | `page.getByRole('textbox')` |
-| Save button | `page.getByRole('button', { name: 'Save' })` |
-| Update success toast | `page.getByText('Updated dataset')` |
 | Failure toast | `page.locator('li[data-sonner-toast]').filter({ hasText: /Failed to|Could not/i })` |
 
-**Leave dialog:** Open the rename form, then click a sidebar link. A "Leave?" dialog intercepts the navigation. Pressing `Escape` or clicking "Stay" keeps the rename form open; "Leave" navigates away and discards changes.
-
-**Two-role simulation:** Both browser contexts must start from the same `localStorage` state for `director.ensureExists` tests. Copy storage state from the admin context when creating the viewer context:
-
-```typescript
-const adminStorageState = await adminPage.context().storageState();
-const viewerContext = await browser.newContext({ storageState: adminStorageState });
-```
+**Leave dialog:** Open the rename form, then click a sidebar link. Escape / "Stay" keeps the form; "Leave" navigates away.
 
 ### Settings page
 
@@ -77,12 +67,4 @@ A static placeholder page. Exists as a second navigation destination for Leave-d
 
 ## State persistence
 
-All data is stored in `localStorage` under the key `sugar-lab-datasets`. No backend is required. To reset: open DevTools → Application → Local Storage → delete `sugar-lab-datasets`.
-
-## Planned scenarios
-
-Additional UI scenarios will be added alongside their respective feature issues:
-
-- **Issue #7** — withCleaner / CleanerStrategy (toasts, cookie banners, overlays)
-- **Issue #8** — waitForStable / StabilityStrategy (animated modals, layout shift)
-- **Issue #9** — clickToURL (link navigation, redirects)
+All data is stored in `localStorage` under the key `sugar-lab-datasets`. No backend is required.
