@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`wait(page, ms, options?)`** — visual countdown overlay for `page.waitForTimeout()`. Shows remaining time in headed mode; pass `{ overlay: false }` for a plain wait.
+- **`wait(page, ms, options?)`** — visual countdown overlay for `page.waitForTimeout()`. Shows remaining time in headed mode; pass `{ overlay: false }` for a plain wait. The overlay survives navigations, never fails the wait, and cleanup is scoped per call so an abandoned wait (e.g. `toPass` timeout) can't remove a newer one's overlay.
 - **`bindPlaybooks(ctx, catalog, opts?)`** — optional `{ name }` calls two-argument `withCtx(name, ctx)` per entry for readable multi-page logs.
 - **`Playbook.withCtx(name, ctx)` overload**, **`logScope()`**, **`runLabel(playName)`** — log prefix separate from registry `Playbook.name`; `Director` / `Play` labels use `scope > PlaybookName > playName`.
 - **Package entry** — explicit `bindPlaybooks` / `BoundPlaybookCatalog` / `BindPlaybooksOptions` re-exports from the root module.

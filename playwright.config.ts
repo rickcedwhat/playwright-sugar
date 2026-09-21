@@ -17,10 +17,16 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'pnpm --dir lab dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  // PW_NO_SERVER=1 skips the lab dev server for specs that don't need it
+  // (e.g. tests/wait.spec.ts).
+  ...(process.env.PW_NO_SERVER
+    ? {}
+    : {
+        webServer: {
+          command: 'pnpm --dir lab dev',
+          url: 'http://localhost:5173',
+          reuseExistingServer: !process.env.CI,
+          timeout: 30_000,
+        },
+      }),
 });
