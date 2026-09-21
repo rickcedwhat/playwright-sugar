@@ -8,9 +8,13 @@ npm install -D @rickcedwhat/playwright-sugar
 pnpm add -D @rickcedwhat/playwright-sugar
 ```
 
+Peer dependency: `@playwright/test`.
+
+Prefer not to add a dependency yet? Copy a **lite** helper from [`snippets/`](https://github.com/rickcedwhat/playwright-sugar/tree/main/snippets). See [Lite vs robust](/guide/helper-forms).
+
 ## Quick start
 
-### Handling RBAC and toast outcomes
+### Branching outcomes with `attemptAction`
 
 Use `attemptAction` when an action can produce multiple outcomes — success, failure toast, or a missing button — and you want to branch on the result rather than let Playwright throw.
 
@@ -24,8 +28,9 @@ const result = await attemptAction(
   [
     Outcomes.success(page.getByText('Deleted successfully')),
     Outcomes.failure(page.getByText('Permission denied')),
-    Outcomes.timeout(5000),
+    Outcomes.timeout('no-feedback'),
   ],
+  { timeout: 5000 },
 );
 
 if (result.isSuccess) {
@@ -33,72 +38,32 @@ if (result.isSuccess) {
 }
 ```
 
-### Structured test scenarios with Play and Director
-
-`Play` lets you describe a test scenario as a sequence of named steps. `Director` runs plays and makes assertions about whether they succeeded or failed — useful for RBAC testing.
-
-```ts
-import { test } from '@playwright/test';
-import { Play, Playbook, Director, Outcomes } from '@rickcedwhat/playwright-sugar';
-
-const itemPb = new Playbook('ItemPlaybook', {
-  exists: ({ name }) => new Play()
-    .nav(async page => { await page.getByRole('link', { name: 'Items' }).click(); })
-    .detect(page => [
-      { name: 'found',    isSuccess: true,  locator: page.locator(`tr:has-text("${name}")`) },
-      { name: 'notFound', isSuccess: false, locator: page.getByText('No items') },
-    ]),
-
-  create: ({ name }) => new Play()
-    .nav(async page => { await page.getByRole('link', { name: 'Items' }).click(); })
-    .attempt(
-      async page => {
-        await page.getByRole('button', { name: 'New item' }).click();
-        await page.getByPlaceholder('Name').fill(name);
-        await page.getByRole('button', { name: 'Create' }).click();
-      },
-      [
-        Outcomes.success(page => page.getByText('Item created')),
-        Outcomes.failure(page => page.getByText('Permission denied')),
-        Outcomes.timeout(8000),
-      ],
-    ),
-});
-
-test('admin can create item', async ({ page }) => {
-  const director = new Director();
-  const pb = itemPb.withCtx({ page });
-
-  await director.assertCan(pb, 'create', { name: 'My Item' });
-});
-
-test('viewer cannot create item', async ({ page }) => {
-  await page.goto('/?role=viewer');
-  const director = new Director();
-  const pb = itemPb.withCtx({ page });
-
-  await director.assertCannot(pb, 'create', { name: 'Blocked Item' });
-});
-```
-
-### Stable locators with relator
+### Stable locators with `relator`
 
 Use `relator` to find an element relative to a unique anchor — avoids fragile nth-child selectors.
 
 ```ts
 import { relator } from '@rickcedwhat/playwright-sugar';
 
-// Click the "Edit" button in the row that contains "Invoice #42"
 const editBtn = relator(
-  page.getByText('Invoice #42'),
   page.getByRole('button', { name: 'Edit' }),
-  'tr'
+  page.getByText('Invoice #42'),
 );
 await editBtn.click();
 ```
 
+### Verified fills
+
+```ts
+import { verifiedFill } from '@rickcedwhat/playwright-sugar';
+
+await verifiedFill(page.getByLabel('Email'), 'qa@example.com');
+```
+
+## Deprecated playbook framework
+
+`Play`, `Playbook`, and `Director` are no longer exported from the package. Sources remain in the repo under `deprecated/playbook/` for a possible future package.
+
 ## Try the Sugar Lab
 
-* The repo ships a Sugar Lab fixture (`lab/`) exercised by `tests/director.spec.ts`.
-* Explore the [Sugar Lab](/guide/sugar-lab) using the interactive **Play explorer** (which features code snippets, illustrative UI, and branching modals).
-* Read `lab/README.md` for instructions on running the real SPA locally.
+The [Sugar Lab](/guide/sugar-lab) playground exercises helpers against a sample UI (and still includes an experimental playbook builder for the deprecated API).

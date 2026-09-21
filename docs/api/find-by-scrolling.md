@@ -1,6 +1,8 @@
 # findByScrolling
 
-Scrolls a container until a target element is found. Supports virtualized lists and infinite-scroll pages where elements are not in the DOM until scrolled into view.
+Scrolls (or steps) until a target element matches — for virtualized lists and infinite-scroll UIs where the row isn’t in the DOM until you move.
+
+Returns the `Locator` when found, or `null` if the end strategy fires first.
 
 ## Signature
 
@@ -8,7 +10,7 @@ Scrolls a container until a target element is found. Supports virtualized lists 
 findByScrolling(
   target: Locator,
   options?: FindByScrollingOptions
-): Promise<void>
+): Promise<Locator | null>
 ```
 
 ```ts
@@ -19,27 +21,28 @@ interface FindByScrollingOptions {
   scrollStrategy?: ScrollStrategy;
   endStrategy?: EndStrategy;
   matchStrategy?: MatchStrategy;
-  stepAmount?: number;       // default: 600 px (simple shorthand)
-  stepAction?: () => Promise<void>; // custom scroll action shorthand
+  stepAmount?: number;       // default: 600 — shorthand for ScrollStrategies.wheel
+  stepAction?: () => Promise<void>; // custom step shorthand
 }
 ```
+
+Defaults: wheel scroll, `EndStrategies.stuck()`, `MatchStrategies.visible()`.
 
 ## Basic example
 
 ```ts
 import { findByScrolling } from '@rickcedwhat/playwright-sugar';
 
-await findByScrolling(page.getByText('Item #500'), {
+const row = await findByScrolling(page.getByText('Item #500'), {
   container: page.locator('.virtual-list'),
   stepAmount: 400,
 });
 
-await expect(page.getByText('Item #500')).toBeVisible();
+expect(row).not.toBeNull();
+await row!.click();
 ```
 
 ## Strategy-based example
-
-Use the built-in strategy factories for fine-grained control.
 
 ```ts
 import {
@@ -49,12 +52,22 @@ import {
   MatchStrategies,
 } from '@rickcedwhat/playwright-sugar';
 
-await findByScrolling(page.getByText('Item #500'), {
+const row = await findByScrolling(page.getByText('Item #500'), {
   container: page.locator('.virtual-list'),
-  scrollStrategy: ScrollStrategies.byPixels(300),
-  endStrategy: EndStrategies.noNewItems(),
-  matchStrategy: MatchStrategies.isVisible(),
-  maxAttempts: 100,
+  scrollStrategy: ScrollStrategies.wheel(300),
+  endStrategy: EndStrategies.max(100),
+  matchStrategy: MatchStrategies.visible(),
   waitAfterStep: 150,
 });
 ```
+
+Load-more button instead of wheel:
+
+```ts
+await findByScrolling(page.getByText('Older post'), {
+  scrollStrategy: ScrollStrategies.click(page.getByRole('button', { name: 'Load more' })),
+  endStrategy: EndStrategies.max(20),
+});
+```
+
+See also [`strategies`](./strategies) for the factory reference.

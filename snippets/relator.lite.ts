@@ -1,3 +1,12 @@
+/**
+ * AUTO-GENERATED — do not edit by hand.
+ * Source: src/relator.ts
+ * Regenerate: pnpm run snippets:generate
+ *
+ * Lite copy-paste relator. Same core behavior as the package
+ * export; robust-only diagnostics and extras are stripped.
+ * Standalone: imports @playwright/test only (no other sugar helpers).
+ */
 import type { Locator } from '@playwright/test';
 
 /**
@@ -21,20 +30,6 @@ export function relator(
         .filter({ has: target });
 
   const result = scope.last().locator(target);
-
-  // sugar-full-only-begin
-  void result.count().then(count => {
-    if (count === 0) {
-      console.warn(
-        '[relator] No elements found. ' +
-        'If `target` was created from a sub-element locator (e.g. row.locator(...)), ' +
-        'try using page.locator() or page.getByRole() instead.'
-      );
-    }
-  }).catch(() => {
-    // ignore — locator may not be resolvable (page not yet navigated, etc.)
-  });
-  // sugar-full-only-end
 
   return result;
 }

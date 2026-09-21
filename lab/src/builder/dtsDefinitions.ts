@@ -37,6 +37,7 @@ declare module '@playwright/test' {
 `;
 
 export const playwrightSugarDts = `
+/** Ambient types for Sugar Lab editor (Play/Playbook still used by the visual builder; not published on npm). */
 declare module '@rickcedwhat/playwright-sugar' {
   import { Page, Locator } from '@playwright/test';
 

@@ -3,16 +3,16 @@ import type { MockInstance } from 'vitest';
 import type { Page } from '@playwright/test';
 import { Play } from './play.js';
 import { Playbook } from './playbook.js';
-import { Outcomes } from './outcomes.js';
+import { Outcomes } from '../../src/outcomes.js';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('./attemptAction.js', () => ({
+vi.mock('../../src/attemptAction.js', () => ({
   attemptAction: vi.fn(),
   detectState: vi.fn(),
 }));
 
-import { attemptAction, detectState } from './attemptAction.js';
+import { attemptAction, detectState } from '../../src/attemptAction.js';
 
 const mockAttemptAction = attemptAction as unknown as MockInstance;
 const mockDetectState = detectState as unknown as MockInstance;

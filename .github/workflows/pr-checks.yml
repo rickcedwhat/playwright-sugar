@@ -50,6 +50,8 @@ jobs:
         run: pnpm install
       - name: Run TypeScript Check
         run: pnpm exec tsc --noEmit
+      - name: Check lite snippets are generated
+        run: pnpm run snippets:check
       - name: Check for TODO/FIXME
         run: |
           if grep -r "TODO\|FIXME" src/ --exclude-dir=node_modules; then
