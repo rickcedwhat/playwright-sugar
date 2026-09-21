@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`wait(page, ms, options?)`** — visual countdown overlay for `page.waitForTimeout()`. Shows remaining time in headed mode; pass `{ overlay: false }` for a plain wait. The overlay survives navigations, never fails the wait, and cleanup is scoped per call so an abandoned wait (e.g. `toPass` timeout) can't remove a newer one's overlay.
+
 ## [0.3.0] - 2026-09-16
 
 ### Changed (breaking)

@@ -60,6 +60,17 @@ import { verifiedFill } from '@rickcedwhat/playwright-sugar';
 await verifiedFill(page.locator('#email'), 'user@example.com');
 ```
 
+### `wait`
+
+`page.waitForTimeout` with a countdown overlay in headed mode, so you can see *why* a test is pausing.
+
+```typescript
+import { wait } from '@rickcedwhat/playwright-sugar';
+
+await wait(page, 5000, { message: 'Waiting for webhook…' });
+await wait(page, 2000, { overlay: false }); // plain wait
+```
+
 ### Also included
 
 `clickToOpen`, `clickToURL`, `findByScrolling`, `hoverMenu`, `watchFor`, `pageTag`, `Outcomes`, scroll/match strategies.
@@ -70,36 +81,9 @@ The RBAC-oriented playbook framework (`Play`, `Playbook`, `Director`) lives in [
 
 ## Docs
 
-### 5. `clickToOpen`
-A robust wrapper for clicks that *must* result in a specific element appearing.
-
-```typescript
-import { clickToOpen } from '@rickcedwhat/playwright-sugar';
-
-await clickToOpen(
-  page.getByRole('button', { name: 'Open Settings' }),
-  page.locator('#settings-modal')
-);
-```
-
----
-
-### 6. `wait`
-A visual countdown wrapper for `page.waitForTimeout`. Shows an overlay with remaining time in headed mode.
-
-```typescript
-import { wait } from '@rickcedwhat/playwright-sugar';
-
-await wait(page, 5000, { message: 'Waiting for webhook…' });
-```
-
----
-
-## The @rickcedwhat Suite
-
-This library is designed to work alongside:
-- [**playwright-smart-library**](https://github.com/rickcedwhat/playwright-smart-library): LLM-powered element resolution.
-- [**playwright-smart-table**](https://github.com/rickcedwhat/playwright-smart-table): Advanced column-aware table interactions.
+- [Getting started](./docs/guide/getting-started.md)
+- [Lite vs robust helpers](./docs/guide/helper-forms.md)
+- [Roadmap](./ROADMAP.md)
 
 ## License
 
