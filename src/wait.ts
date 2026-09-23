@@ -149,7 +149,7 @@ export async function wait(
       )
       .catch(() => {});
 
-  let deadline = Date.now() + ms;
+  const deadline = Date.now() + ms;
   const onNavigated = (frame: Frame) => {
     // Only the main frame matters; a superseded orphan stays quiet
     if (frame !== page.mainFrame() || active.get(page) !== token) return;
@@ -159,15 +159,16 @@ export async function wait(
   page.on('framenavigated', onNavigated);
 
   try {
-    await render(ms);
-    deadline = Date.now() + ms;
+    // Fire-and-forget: awaiting the round-trip would add it to the wait
+    void render(ms);
     await page.waitForTimeout(ms);
   } finally {
     page.off('framenavigated', onNavigated);
     if (active.get(page) === token) active.delete(page);
     if (!page.isClosed()) {
-      // Remove only our own overlay — a newer wait may already own the page
-      await page
+      // Remove only our own overlay — a newer wait may already own the page.
+      // Not awaited: the wait is over, and the round-trip would extend it.
+      void page
         .evaluate(
           ({ marker, token }) => {
             document
