@@ -16,6 +16,7 @@ Quick tour of every helper exported from `@rickcedwhat/playwright-sugar`. Skim t
 | [`hoverMenu`](./hover-menu) | Nested hover menus that close on diagonal mouse moves | L-shaped hover chain |
 | [`watchFor`](./watch-for) | Toast / banner that can appear anytime — dismiss it in the background | Background poller |
 | [`pageTag`](./page-tag) | Multi-tab headed runs — tell tabs apart visually | Chip / bar overlay |
+| [`wait`](./wait) | A deliberate pause you want to *see* in headed runs | Countdown overlay |
 
 ## One-liners
 
@@ -31,6 +32,7 @@ import {
   hoverMenu,
   watchFor,
   pageTag,
+  wait,
 } from '@rickcedwhat/playwright-sugar';
 
 // Branching submit
@@ -84,6 +86,9 @@ stop();
 // Label a headed page for traces / screenshots
 const tag = await pageTag(page, { type: 'bar', label: 'Admin' });
 await tag.hideDuring(() => expect(page).toHaveScreenshot());
+
+// Visible pause while a webhook lands
+await wait(page, 5000, { message: 'Waiting for webhook…' });
 ```
 
 Lite (copy-paste) variants of some helpers live under [`snippets/`](https://github.com/rickcedwhat/playwright-sugar/tree/main/snippets) — see [Lite vs robust](/guide/helper-forms).
