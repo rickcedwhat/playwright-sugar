@@ -46,7 +46,7 @@ Map to sugar’s stated goals:
 | Small QA primitives | Drop-in? Any Playwright suite? |
 | Less flakiness / less boilerplate | Does it make tests more robust, or only prettier? |
 | Clearer failures / debug quality | Better errors, logs, headed visibility? |
-| Lite + robust dual form | Package export only, or snippet + `MANIFEST`? Missing lite = call out |
+| Lite + robust dual form | Package export only, or intended to ship as a snippet + `MANIFEST`? Flag a missing lite snippet only when the helper is intended to ship as a snippet. |
 | Sibling patterns | Same family as `pageTag` (headed debug) vs `relator` / `attemptAction` (action helpers)? |
 
 Be explicit when something fits **debug-visibility** but not **anti-flake**. Both are valid; do not pretend they are the same.
