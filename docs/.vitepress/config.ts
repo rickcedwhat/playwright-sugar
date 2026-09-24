@@ -37,6 +37,7 @@ export default defineConfig({
           { text: 'hoverMenu', link: '/api/hover-menu' },
           { text: 'watchFor', link: '/api/watch-for' },
           { text: 'pageTag', link: '/api/page-tag' },
+          { text: 'wait', link: '/api/wait' },
         ]
       }
     ],

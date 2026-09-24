@@ -60,6 +60,17 @@ import { verifiedFill } from '@rickcedwhat/playwright-sugar';
 await verifiedFill(page.locator('#email'), 'user@example.com');
 ```
 
+### `wait`
+
+`page.waitForTimeout` with a countdown overlay in headed mode, so you can see *why* a test is pausing.
+
+```typescript
+import { wait } from '@rickcedwhat/playwright-sugar';
+
+await wait(page, 5000, { message: 'Waiting for webhook…' });
+await wait(page, 2000, { overlay: false }); // plain wait
+```
+
 ### Also included
 
 `clickToOpen`, `clickToURL`, `findByScrolling`, `hoverMenu`, `watchFor`, `pageTag`, `Outcomes`, scroll/match strategies.
